@@ -6,8 +6,14 @@ type TForward struct {
 	ast   *TAst
 }
 
-func (f *TForward) forwardStruct(str *TAst) {
-
+func (f *TForward) forwardStruct(node *TAst) {
+	name := node.ast0
+	names := node.astArr0
+	types := node.astArr1
+	for i := 0; i < len(names); i++ {
+		nameN := names[i]
+		typeN := types[i]
+	}
 }
 
 func (f *TForward) forwardFunc(fn *TAst) {
