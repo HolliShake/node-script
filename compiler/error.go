@@ -1,0 +1,40 @@
+package main
+
+import (
+	"fmt"
+	"math"
+	"os"
+	"strings"
+)
+
+var PADDING = 3
+
+func RaiseSystemError(message string) {
+	fmt.Fprintln(os.Stderr, "[ERROR] "+message)
+	os.Exit(1)
+}
+
+func RaiseLanguageCompileError(file string, data []rune, message string, position TPosition) {
+	lines := strings.Split(string(data), "\n")
+	start := int(math.Max((float64(position.SLine)-1)-float64(PADDING), 0))
+	ended := int(math.Min((float64(position.ELine)+0)+float64(PADDING), float64(len(lines))))
+	fmtMessage := fmt.Sprintf("[ERROR] %s:%d:%d: %s\n", file, position.SLine, position.SColm, message)
+	strEnded := fmt.Sprintf("%d", int(ended))
+	for i := start; i < ended; i++ {
+		strStart := fmt.Sprintf("%d", i+1)
+		strDiffs := len(strEnded) - len(strStart)
+		fmtMessage += fmt.Sprintf("%s%s | ", strings.Repeat(" ", strDiffs), strStart)
+
+		if (i+1) >= position.SLine && (i+1) <= position.ELine {
+			fmtMessage += " ~ "
+		} else {
+			fmtMessage += "   "
+		}
+		fmtMessage += lines[i]
+		if (i + 1) <= ended {
+			fmtMessage += "\n"
+		}
+	}
+	fmt.Fprint(os.Stderr, fmtMessage)
+	os.Exit(1)
+}

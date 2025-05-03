@@ -1,0 +1,5 @@
+*.exe
+*.dll
+*.js
+*.ns
+thirdparty/node
