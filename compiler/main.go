@@ -10,7 +10,7 @@ func main() {
 	// You can add your code here to implement the desired functionality.
 	fmt.Println("Hello, World!")
 
-	path := "syntax.ns"
+	path := ToAbsolutePath("syntax.ns")
 	data, err := os.ReadFile(path)
 	if err != nil {
 		fmt.Println("Error reading file:", err)

@@ -19,7 +19,14 @@ const (
 
 type TPair struct {
 	name     string
-	dataType TTyping
+	dataType *TTyping
+}
+
+func CreatePair(name string, dataType *TTyping) *TPair {
+	pair := new(TPair)
+	pair.name = name
+	pair.dataType = dataType
+	return pair
 }
 
 type TTyping struct {

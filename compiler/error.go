@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"math"
 	"os"
+	"runtime"
 	"strings"
 )
 
@@ -15,10 +16,11 @@ func RaiseSystemError(message string) {
 }
 
 func RaiseLanguageCompileError(file string, data []rune, message string, position TPosition) {
+	_, fileName, line, _ := runtime.Caller(1)
 	lines := strings.Split(string(data), "\n")
 	start := int(math.Max((float64(position.SLine)-1)-float64(PADDING), 0))
 	ended := int(math.Min((float64(position.ELine)+0)+float64(PADDING), float64(len(lines))))
-	fmtMessage := fmt.Sprintf("[ERROR] %s:%d:%d: %s\n", file, position.SLine, position.SColm, message)
+	fmtMessage := fmt.Sprintf("<%s, %d>[ERROR] %s:%d:%d: %s\n", fileName, line, file, position.SLine, position.SColm, message)
 	strEnded := fmt.Sprintf("%d", int(ended))
 	for i := start; i < ended; i++ {
 		strStart := fmt.Sprintf("%d", i+1)
