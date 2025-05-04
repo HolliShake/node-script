@@ -34,6 +34,7 @@ func CreatePosition(sLine, sColm, eLine, eColm int) *TPosition {
 	return pos
 }
 
+// API:Export
 func (position TPosition) Merge(other TPosition) TPosition {
 	return TPosition{
 		SLine: position.SColm,

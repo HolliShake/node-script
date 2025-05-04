@@ -35,7 +35,7 @@ type TForward struct {
 
 // FILE
 
-func (f *TForward) HasFile(path string) bool {
+func (f *TForward) hasFile(path string) bool {
 	for _, file := range f.Files {
 		if file.Path == path {
 			return true
@@ -44,7 +44,7 @@ func (f *TForward) HasFile(path string) bool {
 	return false
 }
 
-func (f *TForward) GetFile(path string) TFileJob {
+func (f *TForward) getFile(path string) TFileJob {
 	for i := range f.Files {
 		if f.Files[i].Path == path {
 			return f.Files[i]
@@ -53,27 +53,18 @@ func (f *TForward) GetFile(path string) TFileJob {
 	panic("file not found")
 }
 
-func (f *TForward) PopFile() TFileJob {
-	if len(f.Files) == 0 {
-		panic("no file to pop")
-	}
-	file := f.Files[len(f.Files)-1]
-	f.Files = f.Files[:len(f.Files)-1]
-	return file
-}
-
-func (f *TForward) PushFile(file TFileJob) {
+func (f *TForward) pushFile(file TFileJob) {
 	f.Files = append(f.Files, file)
 }
 
 // IMPORT
 
-func (f *TForward) HasImport() bool {
+func (f *TForward) hasImport() bool {
 	return len(f.Imports) > 0
 }
 
-func (f *TForward) PopImport() TFileJob {
-	if !f.HasImport() {
+func (f *TForward) popImport() TFileJob {
+	if !f.hasImport() {
 		panic("no import to pop")
 	}
 	file := f.Imports[len(f.Imports)-1]
@@ -81,18 +72,18 @@ func (f *TForward) PopImport() TFileJob {
 	return file
 }
 
-func (f *TForward) PushImport(file TFileJob) {
+func (f *TForward) pushImport(file TFileJob) {
 	f.Imports = append(f.Imports, file)
 }
 
 // DELAYED
 
-func (f *TForward) HasDelayed() bool {
+func (f *TForward) hasDelayed() bool {
 	return len(f.Delayed) > 0
 }
 
-func (f *TForward) PopDelayed() TDelayedImport {
-	if !f.HasDelayed() {
+func (f *TForward) popDelayed() TDelayedImport {
+	if !f.hasDelayed() {
 		panic("no delayed import to pop")
 	}
 	delayed := f.Delayed[len(f.Delayed)-1]
@@ -100,18 +91,18 @@ func (f *TForward) PopDelayed() TDelayedImport {
 	return delayed
 }
 
-func (f *TForward) PushDelayed(delayed TDelayedImport) {
+func (f *TForward) pushDelayed(delayed TDelayedImport) {
 	f.Delayed = append(f.Delayed, delayed)
 }
 
 // MISSING TYPES
 
-func (f *TForward) HasMissingTypes() bool {
+func (f *TForward) hasMissingTypes() bool {
 	return len(f.MissingTypes) > 0
 }
 
-func (f *TForward) PopMissingTypes() TMissingTypeJob {
-	if !f.HasMissingTypes() {
+func (f *TForward) popMissingTypes() TMissingTypeJob {
+	if !f.hasMissingTypes() {
 		panic("no missing type to pop")
 	}
 	missingType := f.MissingTypes[len(f.MissingTypes)-1]
@@ -119,7 +110,7 @@ func (f *TForward) PopMissingTypes() TMissingTypeJob {
 	return missingType
 }
 
-func (f *TForward) PushMissingTypes(missingType TMissingTypeJob) {
+func (f *TForward) pushMissingTypes(missingType TMissingTypeJob) {
 	f.MissingTypes = append(f.MissingTypes, missingType)
 }
 
@@ -151,14 +142,14 @@ func (f *TForward) getType(fileJob TFileJob, node *TAst) *types.TTyping {
 		keyType := f.getType(fileJob, keyAst)
 		valType := f.getType(fileJob, valAst)
 		if keyType == nil {
-			f.PushMissingTypes(TMissingTypeJob{
+			f.pushMissingTypes(TMissingTypeJob{
 				file:    fileJob,
 				NameAst: keyAst, // For this time, Pass the keyAst here.
 				TypeAst: keyAst,
 			})
 		}
 		if valType == nil {
-			f.PushMissingTypes(TMissingTypeJob{
+			f.pushMissingTypes(TMissingTypeJob{
 				file:    fileJob,
 				NameAst: valAst, // For this time, Pass the valAst here.
 				TypeAst: valAst,
@@ -180,7 +171,7 @@ func (f *TForward) getType(fileJob TFileJob, node *TAst) *types.TTyping {
 		elementAst := node.Ast0
 		elementType := f.getType(fileJob, elementAst)
 		if elementType == nil {
-			f.PushMissingTypes(TMissingTypeJob{
+			f.pushMissingTypes(TMissingTypeJob{
 				file:    fileJob,
 				NameAst: elementAst, // For this time, Pass the valAst here.
 				TypeAst: elementAst,
@@ -203,7 +194,7 @@ func (f *TForward) forwardStruct(fileJob TFileJob, node *TAst) {
 		typeN := typesNode[i]
 		dataType := f.getType(fileJob, typeN)
 		if dataType == nil {
-			f.PushMissingTypes(TMissingTypeJob{
+			f.pushMissingTypes(TMissingTypeJob{
 				file:    fileJob,
 				NameAst: attrN,
 				TypeAst: typeN,
@@ -266,7 +257,7 @@ func (f *TForward) forwardImport(fileJob TFileJob, node *TAst) {
 
 	// If wala pa nakita sa f.Files
 	// E push sa pending imports (f.Imports)
-	if !f.HasFile(actualPath) {
+	if !f.hasFile(actualPath) {
 		data, err := os.ReadFile(actualPath)
 		if err != nil {
 			RaiseLanguageCompileError(
@@ -287,17 +278,17 @@ func (f *TForward) forwardImport(fileJob TFileJob, node *TAst) {
 			Env:    CreatEnv(nil),
 			IsDone: true,
 		}
-		f.PushDelayed(TDelayedImport{
+		f.pushDelayed(TDelayedImport{
 			SrcFile: fileJob,
 			Node:    node,
 		})
-		f.PushImport(childFile)
+		f.pushImport(childFile)
 		return
 	}
 
 	// Otherwise, kung nakita na or nag exists. kuhaa tanan property niya sa sulod
 
-	childFile := f.GetFile(actualPath)
+	childFile := f.getFile(actualPath)
 
 	for i := range namesNode {
 		nameNode := namesNode[i]
@@ -354,20 +345,20 @@ func (f *TForward) forward(fileJob TFileJob) {
 func (f *TForward) build() {
 	// Build the file
 	for len(f.Imports) > 0 {
-		importFile := f.PopImport()
+		importFile := f.popImport()
 		f.forward(importFile)
-		f.PushFile(importFile)
+		f.pushFile(importFile)
 	}
 
 	// Build the delayed imports
-	for f.HasDelayed() {
-		delayedImport := f.PopDelayed()
+	for f.hasDelayed() {
+		delayedImport := f.popDelayed()
 		f.forwardImport(delayedImport.SrcFile, delayedImport.Node)
 	}
 
 	// Missing types resolution
-	for f.HasImport() {
-		missingType := f.PopMissingTypes()
+	for f.hasImport() {
+		missingType := f.popMissingTypes()
 		finalType := f.getType(missingType.file, missingType.TypeAst)
 		if finalType == nil {
 			RaiseLanguageCompileError(
@@ -380,7 +371,8 @@ func (f *TForward) build() {
 	}
 }
 
-func forwardDeclairation(state *TState, path string, data []rune, ast *TAst) {
+// API:Export
+func ForwardDeclairation(state *TState, path string, data []rune, ast *TAst) []TFileJob {
 	// Create a new forward declaration
 	forward := new(TForward)
 	forward.State = state
@@ -397,4 +389,10 @@ func forwardDeclairation(state *TState, path string, data []rune, ast *TAst) {
 
 	forward.forward(job)
 	forward.build()
+
+	if !forward.hasFile(path) {
+		forward.pushFile(job)
+	}
+
+	return forward.Files
 }

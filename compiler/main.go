@@ -20,7 +20,7 @@ func main() {
 	tstate := CreateState()
 	parser := CreateParser(path, string(data))
 	ast := parser.Parse()
-	forwardDeclairation(tstate, path, parser.Tokenizer.Data, ast)
+	ForwardDeclairation(tstate, path, parser.Tokenizer.Data, ast)
 
 	ExecuteFile("test.js")
 }

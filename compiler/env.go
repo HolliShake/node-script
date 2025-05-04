@@ -12,6 +12,7 @@ func CreatEnv(parent *TEnv) *TEnv {
 	return env
 }
 
+// API:Export
 func (env *TEnv) HasLocalSymbol(name string) bool {
 	for i := len(env.symbols) - 1; i >= 0; i-- {
 		if env.symbols[i].Name == name {
@@ -21,6 +22,7 @@ func (env *TEnv) HasLocalSymbol(name string) bool {
 	return false
 }
 
+// API:Export
 func (env *TEnv) HasGlobalSymbol(name string) bool {
 	current := env
 	for current != nil {
@@ -32,6 +34,7 @@ func (env *TEnv) HasGlobalSymbol(name string) bool {
 	return false
 }
 
+// API:Export
 func (env *TEnv) GetSymbol(name string) TSymbol {
 	current := env
 	for current != nil {
@@ -48,6 +51,7 @@ func (env *TEnv) GetSymbol(name string) TSymbol {
 	panic("symbol not found (" + name + ")!!!")
 }
 
+// API:Export
 func (env *TEnv) AddSymbol(symbol TSymbol) {
 	if env.HasLocalSymbol(symbol.Name) {
 		panic("symbol already exists (" + symbol.Name + ")!!!")
