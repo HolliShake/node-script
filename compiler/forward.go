@@ -105,6 +105,7 @@ func (f *TForward) PushDelayed(delayed TDelayedImport) {
 }
 
 // MISSING TYPES
+
 func (f *TForward) HasMissingTypes() bool {
 	return len(f.MissingTypes) > 0
 }
