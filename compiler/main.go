@@ -10,7 +10,7 @@ func main() {
 	// You can add your code here to implement the desired functionality.
 	fmt.Println("Hello, World!")
 
-	path := "syntax.tt"
+	path := "syntax.ns"
 	data, err := os.ReadFile(path)
 	if err != nil {
 		fmt.Println("Error reading file:", err)
@@ -20,7 +20,7 @@ func main() {
 	tstate := CreateState()
 	parser := CreateParser(path, string(data))
 	ast := parser.Parse()
-	forwardDeclairation(tstate, path, ast)
+	forwardDeclairation(tstate, path, parser.Tokenizer.Data, ast)
 
 	ExecuteFile("test.js")
 }

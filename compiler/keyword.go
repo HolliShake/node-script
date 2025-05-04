@@ -24,14 +24,14 @@ const (
 	KeyFalse    = "false"
 	KeyNull     = "null"
 	keyAwait    = "await"
-	KeyInt8     = "int8"  // Typing
-	KeyInt16    = "int16" // Typing
-	KeyInt32    = "int32" // Typing
-	KeyInt64    = "int64" // Typing
-	KeyNum      = "num"   // Typing
-	KeyStr      = "str"   // Typing
-	KeyBool     = "bool"  // Typing
-	KeyVoid     = "void"  // Typing
+	KeyInt8     = "i8"   // Typing
+	KeyInt16    = "i16"  // Typing
+	KeyInt32    = "i32"  // Typing
+	KeyInt64    = "i64"  // Typing
+	KeyNum      = "num"  // Typing
+	KeyStr      = "str"  // Typing
+	KeyBool     = "bool" // Typing
+	KeyVoid     = "void" // Typing
 )
 
 var Keywords = []string{

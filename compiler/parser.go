@@ -5,14 +5,14 @@ import (
 )
 
 type TParser struct {
-	tokenizer *TTokenizer
+	Tokenizer *TTokenizer
 	look      TToken
 }
 
 // API:Export
 func CreateParser(file string, data string) *TParser {
 	parser := new(TParser)
-	parser.tokenizer = CreateTokenizer(file, data)
+	parser.Tokenizer = CreateTokenizer(file, data)
 	return parser
 }
 
@@ -28,13 +28,13 @@ func (parser *TParser) matchT(ttype TTokenType) bool {
 
 func (parser *TParser) acceptV(value string) {
 	if parser.matchV(value) {
-		parser.look = parser.tokenizer.Next()
+		parser.look = parser.Tokenizer.Next()
 		return
 	}
 	// Panic | error
 	RaiseLanguageCompileError(
-		parser.tokenizer.File,
-		parser.tokenizer.Data,
+		parser.Tokenizer.File,
+		parser.Tokenizer.Data,
 		fmt.Sprintf("expected %s, got %s", value, parser.look.Value),
 		parser.look.Position,
 	)
@@ -42,13 +42,13 @@ func (parser *TParser) acceptV(value string) {
 
 func (parser *TParser) acceptT(ttype TTokenType) {
 	if parser.matchT(ttype) {
-		parser.look = parser.tokenizer.Next()
+		parser.look = parser.Tokenizer.Next()
 		return
 	}
 	// Panic | error
 	RaiseLanguageCompileError(
-		parser.tokenizer.File,
-		parser.tokenizer.Data,
+		parser.Tokenizer.File,
+		parser.Tokenizer.Data,
 		fmt.Sprintf("expected %s, got %s", GetTokenTypeName(ttype), GetTokenTypeName(parser.look.Type)),
 		parser.look.Position,
 	)
@@ -134,8 +134,8 @@ func (parser *TParser) array() *TAst {
 			elementN = parser.expression()
 			if elementN == nil {
 				RaiseLanguageCompileError(
-					parser.tokenizer.File,
-					parser.tokenizer.Data,
+					parser.Tokenizer.File,
+					parser.Tokenizer.Data,
 					"missing expression after comma",
 					parser.look.Position,
 				)
@@ -171,8 +171,8 @@ func (parser *TParser) hashmap() *TAst {
 			keyN = parser.expression()
 			if keyN == nil {
 				RaiseLanguageCompileError(
-					parser.tokenizer.File,
-					parser.tokenizer.Data,
+					parser.Tokenizer.File,
+					parser.Tokenizer.Data,
 					"missing key expression after comma",
 					parser.look.Position,
 				)
@@ -204,8 +204,8 @@ func (parser *TParser) memberOrCall() *TAst {
 			member := parser.terminal()
 			if member == nil {
 				RaiseLanguageCompileError(
-					parser.tokenizer.File,
-					parser.tokenizer.Data,
+					parser.Tokenizer.File,
+					parser.Tokenizer.Data,
 					"missing member or expression",
 					parser.look.Position,
 				)
@@ -238,8 +238,8 @@ func (parser *TParser) memberOrCall() *TAst {
 					argN = parser.expression()
 					if argN == nil {
 						RaiseLanguageCompileError(
-							parser.tokenizer.File,
-							parser.tokenizer.Data,
+							parser.Tokenizer.File,
+							parser.Tokenizer.Data,
 							"missing expression after comma",
 							parser.look.Position,
 						)
@@ -289,8 +289,8 @@ func (parser *TParser) ifExpression() *TAst {
 		body := parser.expression()
 		if body == nil {
 			RaiseLanguageCompileError(
-				parser.tokenizer.File,
-				parser.tokenizer.Data,
+				parser.Tokenizer.File,
+				parser.Tokenizer.Data,
 				"missing if body",
 				parser.look.Position,
 			)
@@ -299,8 +299,8 @@ func (parser *TParser) ifExpression() *TAst {
 		elseBody := parser.expression()
 		if elseBody == nil {
 			RaiseLanguageCompileError(
-				parser.tokenizer.File,
-				parser.tokenizer.Data,
+				parser.Tokenizer.File,
+				parser.Tokenizer.Data,
 				"missing else body",
 				parser.look.Position,
 			)
@@ -323,8 +323,8 @@ func (parser *TParser) unary() *TAst {
 		node := parser.unary()
 		if node == nil {
 			RaiseLanguageCompileError(
-				parser.tokenizer.File,
-				parser.tokenizer.Data,
+				parser.Tokenizer.File,
+				parser.Tokenizer.Data,
 				"missing right-hand expression",
 				parser.look.Position,
 			)
@@ -342,8 +342,8 @@ func (parser *TParser) unary() *TAst {
 		node := parser.memberOrCall()
 		if node == nil {
 			RaiseLanguageCompileError(
-				parser.tokenizer.File,
-				parser.tokenizer.Data,
+				parser.Tokenizer.File,
+				parser.Tokenizer.Data,
 				"missing right-hand expression",
 				parser.look.Position,
 			)
@@ -361,8 +361,8 @@ func (parser *TParser) unary() *TAst {
 		node := parser.memberOrCall()
 		if node == nil {
 			RaiseLanguageCompileError(
-				parser.tokenizer.File,
-				parser.tokenizer.Data,
+				parser.Tokenizer.File,
+				parser.Tokenizer.Data,
 				"missing right-hand expression",
 				parser.look.Position,
 			)
@@ -389,8 +389,8 @@ func (parser *TParser) multiplicative() *TAst {
 		rhs := parser.unary()
 		if rhs == nil {
 			RaiseLanguageCompileError(
-				parser.tokenizer.File,
-				parser.tokenizer.Data,
+				parser.Tokenizer.File,
+				parser.Tokenizer.Data,
 				"missing right-hand expression",
 				lhs.Position,
 			)
@@ -418,8 +418,8 @@ func (parser *TParser) additive() *TAst {
 		rhs := parser.multiplicative()
 		if rhs == nil {
 			RaiseLanguageCompileError(
-				parser.tokenizer.File,
-				parser.tokenizer.Data,
+				parser.Tokenizer.File,
+				parser.Tokenizer.Data,
 				"missing right-hand expression",
 				lhs.Position,
 			)
@@ -447,8 +447,8 @@ func (parser *TParser) shift() *TAst {
 		rhs := parser.additive()
 		if rhs == nil {
 			RaiseLanguageCompileError(
-				parser.tokenizer.File,
-				parser.tokenizer.Data,
+				parser.Tokenizer.File,
+				parser.Tokenizer.Data,
 				"missing right-hand expression",
 				lhs.Position,
 			)
@@ -477,8 +477,8 @@ func (parser *TParser) relational() *TAst {
 		rhs := parser.shift()
 		if rhs == nil {
 			RaiseLanguageCompileError(
-				parser.tokenizer.File,
-				parser.tokenizer.Data,
+				parser.Tokenizer.File,
+				parser.Tokenizer.Data,
 				"missing right-hand expression",
 				lhs.Position,
 			)
@@ -506,8 +506,8 @@ func (parser *TParser) equality() *TAst {
 		rhs := parser.relational()
 		if rhs == nil {
 			RaiseLanguageCompileError(
-				parser.tokenizer.File,
-				parser.tokenizer.Data,
+				parser.Tokenizer.File,
+				parser.Tokenizer.Data,
 				"missing right-hand expression",
 				lhs.Position,
 			)
@@ -535,8 +535,8 @@ func (parser *TParser) bitwise() *TAst {
 		rhs := parser.equality()
 		if rhs == nil {
 			RaiseLanguageCompileError(
-				parser.tokenizer.File,
-				parser.tokenizer.Data,
+				parser.Tokenizer.File,
+				parser.Tokenizer.Data,
 				"missing right-hand expression",
 				lhs.Position,
 			)
@@ -564,8 +564,8 @@ func (parser *TParser) logical() *TAst {
 		rhs := parser.bitwise()
 		if rhs == nil {
 			RaiseLanguageCompileError(
-				parser.tokenizer.File,
-				parser.tokenizer.Data,
+				parser.Tokenizer.File,
+				parser.Tokenizer.Data,
 				"missing right-hand expression",
 				lhs.Position,
 			)
@@ -593,8 +593,8 @@ func (parser *TParser) simpleAssign() *TAst {
 		rhs := parser.logical()
 		if rhs == nil {
 			RaiseLanguageCompileError(
-				parser.tokenizer.File,
-				parser.tokenizer.Data,
+				parser.Tokenizer.File,
+				parser.Tokenizer.Data,
 				"missing right-hand expression",
 				lhs.Position,
 			)
@@ -622,8 +622,8 @@ func (parser *TParser) mulAssign() *TAst {
 		rhs := parser.simpleAssign()
 		if rhs == nil {
 			RaiseLanguageCompileError(
-				parser.tokenizer.File,
-				parser.tokenizer.Data,
+				parser.Tokenizer.File,
+				parser.Tokenizer.Data,
 				"missing right-hand expression",
 				lhs.Position,
 			)
@@ -651,8 +651,8 @@ func (parser *TParser) addAssign() *TAst {
 		rhs := parser.mulAssign()
 		if rhs == nil {
 			RaiseLanguageCompileError(
-				parser.tokenizer.File,
-				parser.tokenizer.Data,
+				parser.Tokenizer.File,
+				parser.Tokenizer.Data,
 				"missing right-hand expression",
 				lhs.Position,
 			)
@@ -680,8 +680,8 @@ func (parser *TParser) shiftAssign() *TAst {
 		rhs := parser.addAssign()
 		if rhs == nil {
 			RaiseLanguageCompileError(
-				parser.tokenizer.File,
-				parser.tokenizer.Data,
+				parser.Tokenizer.File,
+				parser.Tokenizer.Data,
 				"missing right-hand expression",
 				lhs.Position,
 			)
@@ -709,8 +709,8 @@ func (parser *TParser) bitAssign() *TAst {
 		rhs := parser.shiftAssign()
 		if rhs == nil {
 			RaiseLanguageCompileError(
-				parser.tokenizer.File,
-				parser.tokenizer.Data,
+				parser.Tokenizer.File,
+				parser.Tokenizer.Data,
 				"missing right-hand expression",
 				lhs.Position,
 			)
@@ -736,8 +736,8 @@ func (parser *TParser) mandatoryExpression() *TAst {
 		return node
 	}
 	RaiseLanguageCompileError(
-		parser.tokenizer.File,
-		parser.tokenizer.Data,
+		parser.Tokenizer.File,
+		parser.Tokenizer.Data,
 		"missing expression",
 		parser.look.Position,
 	)
@@ -752,8 +752,8 @@ func (parser *TParser) baseType() *TAst {
 		keyType := parser.typeOrNil()
 		if keyType == nil {
 			RaiseLanguageCompileError(
-				parser.tokenizer.File,
-				parser.tokenizer.Data,
+				parser.Tokenizer.File,
+				parser.Tokenizer.Data,
 				"missing key type",
 				parser.look.Position,
 			)
@@ -762,8 +762,8 @@ func (parser *TParser) baseType() *TAst {
 		valueType := parser.typeOrNil()
 		if valueType == nil {
 			RaiseLanguageCompileError(
-				parser.tokenizer.File,
-				parser.tokenizer.Data,
+				parser.Tokenizer.File,
+				parser.Tokenizer.Data,
 				"missing value type",
 				parser.look.Position,
 			)
@@ -783,8 +783,8 @@ func (parser *TParser) baseType() *TAst {
 		elementType := parser.typeOrNil()
 		if elementType == nil {
 			RaiseLanguageCompileError(
-				parser.tokenizer.File,
-				parser.tokenizer.Data,
+				parser.Tokenizer.File,
+				parser.Tokenizer.Data,
 				"missing element type",
 				parser.look.Position,
 			)
@@ -808,8 +808,8 @@ func (parser *TParser) baseType() *TAst {
 				argN = parser.typeOrNil()
 				if argN == nil {
 					RaiseLanguageCompileError(
-						parser.tokenizer.File,
-						parser.tokenizer.Data,
+						parser.Tokenizer.File,
+						parser.Tokenizer.Data,
 						"missing expression after comma",
 						parser.look.Position,
 					)
@@ -821,8 +821,8 @@ func (parser *TParser) baseType() *TAst {
 		returnNode := parser.typeOrNil()
 		if returnNode == nil {
 			RaiseLanguageCompileError(
-				parser.tokenizer.File,
-				parser.tokenizer.Data,
+				parser.Tokenizer.File,
+				parser.Tokenizer.Data,
 				"missing return type",
 				parser.look.Position,
 			)
@@ -913,8 +913,8 @@ func (parser *TParser) typing() *TAst {
 	dtypeAst := parser.typeOrNil()
 	if dtypeAst == nil {
 		RaiseLanguageCompileError(
-			parser.tokenizer.File,
-			parser.tokenizer.Data,
+			parser.Tokenizer.File,
+			parser.Tokenizer.Data,
 			"missing type",
 			parser.look.Position,
 		)
@@ -962,8 +962,8 @@ func (parser *TParser) structDecl() *TAst {
 	nameAst := parser.terminal()
 	if nameAst == nil {
 		RaiseLanguageCompileError(
-			parser.tokenizer.File,
-			parser.tokenizer.Data,
+			parser.Tokenizer.File,
+			parser.Tokenizer.Data,
 			"missing struct name",
 			parser.look.Position,
 		)
@@ -974,8 +974,8 @@ func (parser *TParser) structDecl() *TAst {
 	nameN := parser.terminal()
 	if nameN == nil {
 		RaiseLanguageCompileError(
-			parser.tokenizer.File,
-			parser.tokenizer.Data,
+			parser.Tokenizer.File,
+			parser.Tokenizer.Data,
 			"struct must have at least one field",
 			parser.look.Position,
 		)
@@ -1014,8 +1014,8 @@ func (parser *TParser) funcDecl() *TAst {
 		thisName = parser.terminal()
 		if thisName == nil {
 			RaiseLanguageCompileError(
-				parser.tokenizer.File,
-				parser.tokenizer.Data,
+				parser.Tokenizer.File,
+				parser.Tokenizer.Data,
 				"missing method name",
 				parser.look.Position,
 			)
@@ -1026,8 +1026,8 @@ func (parser *TParser) funcDecl() *TAst {
 	funcNameAst := parser.terminal()
 	if funcNameAst == nil {
 		RaiseLanguageCompileError(
-			parser.tokenizer.File,
-			parser.tokenizer.Data,
+			parser.Tokenizer.File,
+			parser.Tokenizer.Data,
 			"missing function name",
 			parser.look.Position,
 		)
@@ -1051,8 +1051,8 @@ func (parser *TParser) funcDecl() *TAst {
 			nameN := parser.terminal()
 			if nameN == nil {
 				RaiseLanguageCompileError(
-					parser.tokenizer.File,
-					parser.tokenizer.Data,
+					parser.Tokenizer.File,
+					parser.Tokenizer.Data,
 					"missing field name",
 					parser.look.Position,
 				)
@@ -1097,8 +1097,8 @@ func (parser *TParser) importDecl() *TAst {
 	nameN := parser.terminal()
 	if nameN == nil {
 		RaiseLanguageCompileError(
-			parser.tokenizer.File,
-			parser.tokenizer.Data,
+			parser.Tokenizer.File,
+			parser.Tokenizer.Data,
 			"missing import name",
 			parser.look.Position,
 		)
@@ -1109,8 +1109,8 @@ func (parser *TParser) importDecl() *TAst {
 		nameN = parser.terminal()
 		if nameN == nil {
 			RaiseLanguageCompileError(
-				parser.tokenizer.File,
-				parser.tokenizer.Data,
+				parser.Tokenizer.File,
+				parser.Tokenizer.Data,
 				"missing import name after comma",
 				parser.look.Position,
 			)
@@ -1122,8 +1122,8 @@ func (parser *TParser) importDecl() *TAst {
 	path := parser.terminal()
 	if path == nil {
 		RaiseLanguageCompileError(
-			parser.tokenizer.File,
-			parser.tokenizer.Data,
+			parser.Tokenizer.File,
+			parser.Tokenizer.Data,
 			"missing import path",
 			parser.look.Position,
 		)
@@ -1150,8 +1150,8 @@ func (parser *TParser) varDecl() *TAst {
 	var value *TAst = nil
 	if nameN == nil {
 		RaiseLanguageCompileError(
-			parser.tokenizer.File,
-			parser.tokenizer.Data,
+			parser.Tokenizer.File,
+			parser.Tokenizer.Data,
 			"missing field name",
 			parser.look.Position,
 		)
@@ -1168,8 +1168,8 @@ func (parser *TParser) varDecl() *TAst {
 		nameN = parser.terminal()
 		if nameN == nil {
 			RaiseLanguageCompileError(
-				parser.tokenizer.File,
-				parser.tokenizer.Data,
+				parser.Tokenizer.File,
+				parser.Tokenizer.Data,
 				"missing field name after comma",
 				parser.look.Position,
 			)
@@ -1205,8 +1205,8 @@ func (parser *TParser) constDecl() *TAst {
 	var value *TAst = nil
 	if nameN == nil {
 		RaiseLanguageCompileError(
-			parser.tokenizer.File,
-			parser.tokenizer.Data,
+			parser.Tokenizer.File,
+			parser.Tokenizer.Data,
 			"missing field name",
 			parser.look.Position,
 		)
@@ -1223,8 +1223,8 @@ func (parser *TParser) constDecl() *TAst {
 		nameN = parser.terminal()
 		if nameN == nil {
 			RaiseLanguageCompileError(
-				parser.tokenizer.File,
-				parser.tokenizer.Data,
+				parser.Tokenizer.File,
+				parser.Tokenizer.Data,
 				"missing field name after comma",
 				parser.look.Position,
 			)
@@ -1260,8 +1260,8 @@ func (parser *TParser) localDecl() *TAst {
 	var value *TAst = nil
 	if nameN == nil {
 		RaiseLanguageCompileError(
-			parser.tokenizer.File,
-			parser.tokenizer.Data,
+			parser.Tokenizer.File,
+			parser.Tokenizer.Data,
 			"missing field name",
 			parser.look.Position,
 		)
@@ -1278,8 +1278,8 @@ func (parser *TParser) localDecl() *TAst {
 		nameN = parser.terminal()
 		if nameN == nil {
 			RaiseLanguageCompileError(
-				parser.tokenizer.File,
-				parser.tokenizer.Data,
+				parser.Tokenizer.File,
+				parser.Tokenizer.Data,
 				"missing field name after comma",
 				parser.look.Position,
 			)
@@ -1335,8 +1335,8 @@ func (parser *TParser) forDecl() *TAst {
 	body := parser.statement()
 	if body == nil {
 		RaiseLanguageCompileError(
-			parser.tokenizer.File,
-			parser.tokenizer.Data,
+			parser.Tokenizer.File,
+			parser.Tokenizer.Data,
 			"missing body in for loop",
 			parser.look.Position,
 		)
@@ -1344,8 +1344,8 @@ func (parser *TParser) forDecl() *TAst {
 	if parser.matchV(KeyIf) {
 		if isForMode || cond != nil || mutt != nil {
 			RaiseLanguageCompileError(
-				parser.tokenizer.File,
-				parser.tokenizer.Data,
+				parser.Tokenizer.File,
+				parser.Tokenizer.Data,
 				"ambiguous 'if' in for loop",
 				parser.look.Position,
 			)
@@ -1364,8 +1364,8 @@ func (parser *TParser) forDecl() *TAst {
 		forType = AstForIf
 	} else {
 		RaiseLanguageCompileError(
-			parser.tokenizer.File,
-			parser.tokenizer.Data,
+			parser.Tokenizer.File,
+			parser.Tokenizer.Data,
 			"invalid 'for' statement",
 			parser.look.Position,
 		)
@@ -1387,8 +1387,8 @@ func (parser *TParser) doWhileDecl() *TAst {
 	body := parser.statement()
 	if body == nil {
 		RaiseLanguageCompileError(
-			parser.tokenizer.File,
-			parser.tokenizer.Data,
+			parser.Tokenizer.File,
+			parser.Tokenizer.Data,
 			"missing body in do while loop",
 			parser.look.Position,
 		)
@@ -1417,8 +1417,8 @@ func (parser *TParser) whileDecl() *TAst {
 	body := parser.statement()
 	if body == nil {
 		RaiseLanguageCompileError(
-			parser.tokenizer.File,
-			parser.tokenizer.Data,
+			parser.Tokenizer.File,
+			parser.Tokenizer.Data,
 			"missing body in while loop",
 			parser.look.Position,
 		)
@@ -1441,8 +1441,8 @@ func (parser *TParser) ifDecl() *TAst {
 	body := parser.statement()
 	if body == nil {
 		RaiseLanguageCompileError(
-			parser.tokenizer.File,
-			parser.tokenizer.Data,
+			parser.Tokenizer.File,
+			parser.Tokenizer.Data,
 			"invalid 'if' statement",
 			parser.look.Position,
 		)
@@ -1530,6 +1530,6 @@ func (parser *TParser) program() *TAst {
 
 // API:Export
 func (parser *TParser) Parse() *TAst {
-	parser.look = parser.tokenizer.Next()
+	parser.look = parser.Tokenizer.Next()
 	return parser.program()
 }

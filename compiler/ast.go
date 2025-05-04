@@ -83,14 +83,14 @@ const (
 type TAst struct {
 	Ttype    AstType
 	Position TPosition
-	str0     string
-	ast0     *TAst
-	ast1     *TAst
-	ast2     *TAst
-	ast3     *TAst
-	astArr0  []*TAst
-	astArr1  []*TAst
-	astArr2  []*TAst
+	Str0     string
+	Ast0     *TAst
+	Ast1     *TAst
+	Ast2     *TAst
+	Ast3     *TAst
+	AstArr0  []*TAst
+	AstArr1  []*TAst
+	AstArr2  []*TAst
 }
 
 func CreateAst(ttype AstType, position TPosition) *TAst {
@@ -102,122 +102,122 @@ func CreateAst(ttype AstType, position TPosition) *TAst {
 
 func AstTerminal(ttype AstType, position TPosition, str0 string) *TAst {
 	ast := CreateAst(ttype, position)
-	ast.str0 = str0
+	ast.Str0 = str0
 	return ast
 }
 
-func AstSingle(ttype AstType, position TPosition, ast0 *TAst) *TAst {
+func AstSingle(ttype AstType, position TPosition, Ast0 *TAst) *TAst {
 	ast := CreateAst(ttype, position)
-	ast.ast0 = ast0
+	ast.Ast0 = Ast0
 	return ast
 }
 
-func AstDouble(ttype AstType, position TPosition, ast0 *TAst, ast1 *TAst) *TAst {
+func AstDouble(ttype AstType, position TPosition, Ast0 *TAst, Ast1 *TAst) *TAst {
 	ast := CreateAst(ttype, position)
-	ast.ast0 = ast0
-	ast.ast1 = ast1
+	ast.Ast0 = Ast0
+	ast.Ast1 = Ast1
 	return ast
 }
 
-func AstTriple(ttype AstType, position TPosition, ast0 *TAst, ast1 *TAst, ast2 *TAst) *TAst {
+func AstTriple(ttype AstType, position TPosition, Ast0 *TAst, Ast1 *TAst, Ast2 *TAst) *TAst {
 	ast := CreateAst(ttype, position)
-	ast.ast0 = ast0
-	ast.ast1 = ast1
-	ast.ast2 = ast2
+	ast.Ast0 = Ast0
+	ast.Ast1 = Ast1
+	ast.Ast2 = Ast2
 	return ast
 }
 
-func AstQuad(ttype AstType, position TPosition, ast0 *TAst, ast1 *TAst, ast2 *TAst, ast3 *TAst) *TAst {
+func AstQuad(ttype AstType, position TPosition, Ast0 *TAst, Ast1 *TAst, Ast2 *TAst, Ast3 *TAst) *TAst {
 	ast := CreateAst(ttype, position)
-	ast.ast0 = ast0
-	ast.ast1 = ast1
-	ast.ast2 = ast2
-	ast.ast3 = ast3
+	ast.Ast0 = Ast0
+	ast.Ast1 = Ast1
+	ast.Ast2 = Ast2
+	ast.Ast3 = Ast3
 	return ast
 }
 
-func AstSingleArray(ttype AstType, position TPosition, astArr0 []*TAst) *TAst {
+func AstSingleArray(ttype AstType, position TPosition, AstArr0 []*TAst) *TAst {
 	ast := CreateAst(ttype, position)
-	ast.astArr0 = astArr0
+	ast.AstArr0 = AstArr0
 	return ast
 }
 
-func AstDoubleArray(ttype AstType, position TPosition, astArr0 []*TAst, astArr1 []*TAst) *TAst {
+func AstDoubleArray(ttype AstType, position TPosition, AstArr0 []*TAst, AstArr1 []*TAst) *TAst {
 	ast := CreateAst(ttype, position)
-	ast.astArr0 = astArr0
-	ast.astArr1 = astArr1
+	ast.AstArr0 = AstArr0
+	ast.AstArr1 = AstArr1
 	return ast
 }
 
-func AstSingleWithArray(ttype AstType, position TPosition, ast0 *TAst, astArr0 []*TAst) *TAst {
+func AstSingleWithArray(ttype AstType, position TPosition, Ast0 *TAst, AstArr0 []*TAst) *TAst {
 	ast := CreateAst(ttype, position)
-	ast.ast0 = ast0
-	ast.astArr0 = astArr0
+	ast.Ast0 = Ast0
+	ast.AstArr0 = AstArr0
 	return ast
 }
 
 // Custom AST functions for specific constructs
 
-func AstPostfix(ttype AstType, position TPosition, ast0 *TAst, opt string) *TAst {
+func AstPostfix(ttype AstType, position TPosition, Ast0 *TAst, opt string) *TAst {
 	ast := CreateAst(ttype, position)
-	ast.str0 = opt
-	ast.ast0 = ast0
+	ast.Str0 = opt
+	ast.Ast0 = Ast0
 	return ast
 }
 
-func AstUnary(ttype AstType, position TPosition, ast0 *TAst, opt string) *TAst {
+func AstUnary(ttype AstType, position TPosition, Ast0 *TAst, opt string) *TAst {
 	ast := CreateAst(ttype, position)
-	ast.str0 = opt
-	ast.ast0 = ast0
+	ast.Str0 = opt
+	ast.Ast0 = Ast0
 	return ast
 }
 
 func AstBinary(ttype AstType, position TPosition, lhs *TAst, rhs *TAst, opt string) *TAst {
 	ast := CreateAst(ttype, position)
-	ast.str0 = opt
-	ast.ast0 = lhs
-	ast.ast1 = rhs
+	ast.Str0 = opt
+	ast.Ast0 = lhs
+	ast.Ast1 = rhs
 	return ast
 }
 
 func AstStructDec(ttype AstType, position TPosition, name *TAst, fieldNames []*TAst, fieldTypes []*TAst) *TAst {
 	ast := CreateAst(ttype, position)
-	ast.ast0 = name
-	ast.astArr0 = fieldNames
-	ast.astArr1 = fieldTypes
+	ast.Ast0 = name
+	ast.AstArr0 = fieldNames
+	ast.AstArr1 = fieldTypes
 	return ast
 }
 
 func AstFuncDec(ttype AstType, position TPosition, name *TAst, returnType *TAst, paramNames []*TAst, paramTypes []*TAst, children []*TAst) *TAst {
 	ast := CreateAst(ttype, position)
-	ast.ast0 = name
-	ast.ast1 = returnType
-	ast.astArr0 = paramNames
-	ast.astArr1 = paramTypes
-	ast.astArr2 = children
+	ast.Ast0 = name
+	ast.Ast1 = returnType
+	ast.AstArr0 = paramNames
+	ast.AstArr1 = paramTypes
+	ast.AstArr2 = children
 	return ast
 }
 
 func AstVarDec(ttype AstType, position TPosition, names []*TAst, types []*TAst, values []*TAst) *TAst {
 	ast := CreateAst(ttype, position)
-	ast.astArr0 = names
-	ast.astArr1 = types
-	ast.astArr2 = values
+	ast.AstArr0 = names
+	ast.AstArr1 = types
+	ast.AstArr2 = values
 	return ast
 }
 
 func AstForDec(ttype AstType, position TPosition, init *TAst, cond *TAst, post *TAst, body *TAst) *TAst {
 	ast := CreateAst(ttype, position)
-	ast.ast0 = init
-	ast.ast1 = cond
-	ast.ast2 = post
-	ast.ast3 = body
+	ast.Ast0 = init
+	ast.Ast1 = cond
+	ast.Ast2 = post
+	ast.Ast3 = body
 	return ast
 }
 
 func AstBlock(ttype AstType, position TPosition, children []*TAst) *TAst {
 	ast := CreateAst(ttype, position)
-	ast.astArr0 = children
+	ast.AstArr0 = children
 	return ast
 }
 
