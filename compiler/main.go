@@ -21,6 +21,4 @@ func main() {
 	parser := CreateParser(path, string(data))
 	ast := parser.Parse()
 	ForwardDeclairation(tstate, path, parser.Tokenizer.Data, ast)
-
-	ExecuteFile("test.js")
 }

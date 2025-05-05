@@ -188,10 +188,34 @@ func (f *TForward) forwardStruct(fileJob TFileJob, node *TAst) {
 	nameNode := node.Ast0
 	namesNode := node.AstArr0
 	typesNode := node.AstArr1
+	if nameNode.Ttype != AstIDN {
+		RaiseLanguageCompileError(
+			fileJob.Path,
+			fileJob.Data,
+			"invalid struct name, struct name must be in a form of identifier",
+			nameNode.Position,
+		)
+	}
+	if fileJob.Env.HasLocalSymbol(nameNode.Str0) {
+		RaiseLanguageCompileError(
+			fileJob.Path,
+			fileJob.Data,
+			"duplicate struct name",
+			nameNode.Position,
+		)
+	}
 	attributes := make([]*types.TPair, 0)
-	for i := 0; i < len(namesNode); i++ {
+	for i := range namesNode {
 		attrN := namesNode[i]
 		typeN := typesNode[i]
+		if attrN.Ttype != AstIDN {
+			RaiseLanguageCompileError(
+				fileJob.Path,
+				fileJob.Data,
+				"invalid attribute name, attribute name must be in a form of identifier",
+				attrN.Position,
+			)
+		}
 		dataType := f.getType(fileJob, typeN)
 		if dataType == nil {
 			f.pushMissingTypes(TMissingTypeJob{
@@ -227,10 +251,6 @@ func (f *TForward) forwardStruct(fileJob TFileJob, node *TAst) {
 		IsConst:      true,
 		IsInitialize: true,
 	})
-}
-
-func (f *TForward) forwardFunc(fileJob TFileJob, node *TAst) {
-
 }
 
 func (f *TForward) forwardImport(fileJob TFileJob, node *TAst) {
@@ -334,8 +354,6 @@ func (f *TForward) forward(fileJob TFileJob) {
 		switch child.Ttype {
 		case AstStruct:
 			f.forwardStruct(fileJob, child)
-		case AstFunc:
-			f.forwardFunc(fileJob, child)
 		case AstImport:
 			f.forwardImport(fileJob, child)
 		}
@@ -344,7 +362,7 @@ func (f *TForward) forward(fileJob TFileJob) {
 
 func (f *TForward) build() {
 	// Build the file
-	for len(f.Imports) > 0 {
+	for f.hasImport() {
 		importFile := f.popImport()
 		f.forward(importFile)
 		f.pushFile(importFile)
@@ -357,7 +375,7 @@ func (f *TForward) build() {
 	}
 
 	// Missing types resolution
-	for f.hasImport() {
+	for f.hasMissingTypes() {
 		missingType := f.popMissingTypes()
 		finalType := f.getType(missingType.file, missingType.TypeAst)
 		if finalType == nil {

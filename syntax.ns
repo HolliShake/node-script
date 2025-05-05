@@ -1,0 +1,12 @@
+import ( Dog ) from "./test.ns";
+
+
+struct Person {
+    name str;
+    age i32;
+    pet Dog;
+}
+
+func (p Person) getPet() Dog {
+
+}

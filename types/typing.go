@@ -14,18 +14,20 @@ const (
 	TypeBit    TypeCode = 1
 	TypeNil    TypeCode = 0
 	TypeArr    TypeCode = 0xc0ffee
-	TypeStruct TypeCode = 0xdeadbeef
+	TypeMap    TypeCode = 0xdeadbeef
+	TypeStruct TypeCode = 0x8badf00d
+	TypeFunc   TypeCode = 0x8badcafe
 )
 
 type TPair struct {
-	name     string
-	dataType *TTyping
+	Name     string
+	DataType *TTyping
 }
 
 func CreatePair(name string, dataType *TTyping) *TPair {
 	pair := new(TPair)
-	pair.name = name
-	pair.dataType = dataType
+	pair.Name = name
+	pair.DataType = dataType
 	return pair
 }
 
@@ -35,6 +37,48 @@ type TTyping struct {
 	internal0      *TTyping
 	internal1      *TTyping
 	members0       []*TPair
+	methods        []*TPair
+}
+
+func (t *TTyping) HasMember(name string) bool {
+	for _, member := range t.members0 {
+		if member.Name == name {
+			return true
+		}
+	}
+	return false
+}
+
+func (t *TTyping) GetMember(name string) *TPair {
+	for _, member := range t.members0 {
+		if member.Name == name {
+			return member
+		}
+	}
+	return nil
+}
+
+func (t *TTyping) HasMethod(name string) bool {
+	for _, method := range t.methods {
+		if method.Name == name {
+			return true
+		}
+	}
+	return false
+}
+
+func (t *TTyping) GetMethod(name string) *TPair {
+	for _, method := range t.methods {
+		if method.Name == name {
+			return method
+		}
+	}
+	return nil
+}
+
+func (t *TTyping) AddMethod(name string, dataType *TTyping) {
+	pair := CreatePair(name, dataType)
+	t.methods = append(t.methods, pair)
 }
 
 func (t *TTyping) ToString() string {
@@ -68,6 +112,10 @@ func CreateTyping(repr string, size TypeCode) *TTyping {
 	typing := new(TTyping)
 	typing.representation = repr
 	typing.size = size
+	typing.internal0 = nil
+	typing.internal1 = nil
+	typing.members0 = nil
+	typing.methods = make([]*TPair, 0)
 	return typing
 }
 
@@ -122,6 +170,13 @@ func TStruct(name string, attributes []*TPair) *TTyping {
 	return typing
 }
 
+func TFunc(attributes []*TPair, returnType *TTyping) *TTyping {
+	typing := CreateTyping("func{}", TypeFunc)
+	typing.internal0 = returnType
+	typing.members0 = attributes
+	return typing
+}
+
 func IsValidKey(ttype *TTyping) bool {
 	switch ttype.size {
 	case TypeI08:
@@ -134,6 +189,7 @@ func IsValidKey(ttype *TTyping) bool {
 		return true
 	case TypeNil:
 	case TypeArr:
+	case TypeMap:
 	case TypeStruct:
 	default:
 		return false
@@ -150,9 +206,14 @@ func IsValidElementType(ttype *TTyping) bool {
 	case TypeNum:
 	case TypeStr:
 	case TypeBit:
+		return true
 	case TypeNil:
+		return false
 	case TypeArr:
+	case TypeMap:
+		return true
 	case TypeStruct:
+	default:
 		return false
 	}
 	return false

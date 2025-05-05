@@ -1080,7 +1080,7 @@ func (parser *TParser) funcDecl() *TAst {
 	return AstFuncDec(
 		funcType,
 		start.Merge(ended),
-		nameN,
+		funcNameAst,
 		returnTypeAst,
 		names,
 		types,
