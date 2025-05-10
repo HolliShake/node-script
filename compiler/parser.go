@@ -121,37 +121,6 @@ func (parser *TParser) group() *TAst {
 	return parser.terminal()
 }
 
-func (parser *TParser) array() *TAst {
-	start := parser.look.Position
-	ended := start
-	parser.acceptV("[")
-	elements := make([]*TAst, 0)
-	elementN := parser.expression()
-	if elementN != nil {
-		elements = append(elements, elementN)
-		for parser.matchV(",") {
-			parser.acceptV(",")
-			elementN = parser.expression()
-			if elementN == nil {
-				RaiseLanguageCompileError(
-					parser.Tokenizer.File,
-					parser.Tokenizer.Data,
-					"missing expression after comma",
-					parser.look.Position,
-				)
-			}
-			elements = append(elements, elementN)
-		}
-	}
-	ended = parser.look.Position
-	parser.acceptV("]")
-	return AstSingleArray(
-		AstArray,
-		start.Merge(ended),
-		elements,
-	)
-}
-
 func (parser *TParser) hashmap() *TAst {
 	start := parser.look.Position
 	ended := start
@@ -190,6 +159,37 @@ func (parser *TParser) hashmap() *TAst {
 		start.Merge(ended),
 		keys,
 		vals,
+	)
+}
+
+func (parser *TParser) array() *TAst {
+	start := parser.look.Position
+	ended := start
+	parser.acceptV("[")
+	elements := make([]*TAst, 0)
+	elementN := parser.expression()
+	if elementN != nil {
+		elements = append(elements, elementN)
+		for parser.matchV(",") {
+			parser.acceptV(",")
+			elementN = parser.expression()
+			if elementN == nil {
+				RaiseLanguageCompileError(
+					parser.Tokenizer.File,
+					parser.Tokenizer.Data,
+					"missing expression after comma",
+					parser.look.Position,
+				)
+			}
+			elements = append(elements, elementN)
+		}
+	}
+	ended = parser.look.Position
+	parser.acceptV("]")
+	return AstSingleArray(
+		AstArray,
+		start.Merge(ended),
+		elements,
 	)
 }
 
@@ -1303,14 +1303,6 @@ func (parser *TParser) localDecl() *TAst {
 	)
 }
 
-func (parser *TParser) forModeDecl() *TAst {
-	if parser.matchV(KeyVar) || parser.matchV(KeyConst) || parser.matchV(KeyLocal) {
-		return parser.statement()
-	} else {
-		return parser.expression()
-	}
-}
-
 func (parser *TParser) forDecl() *TAst {
 	start := parser.look.Position
 	ended := start
@@ -1378,6 +1370,14 @@ func (parser *TParser) forDecl() *TAst {
 		mutt,
 		body,
 	)
+}
+
+func (parser *TParser) forModeDecl() *TAst {
+	if parser.matchV(KeyVar) || parser.matchV(KeyConst) || parser.matchV(KeyLocal) {
+		return parser.statement()
+	} else {
+		return parser.expression()
+	}
 }
 
 func (parser *TParser) doWhileDecl() *TAst {

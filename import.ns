@@ -1,0 +1,12 @@
+import (
+    Person
+) from "./syntax.ns";
+
+struct Dog {
+    name str;
+    p Person;
+}
+
+import (
+    Test
+) from "./test.ns";
