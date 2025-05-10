@@ -2,11 +2,14 @@ import (
     Person
 ) from "./syntax.ns";
 
+import (
+    name
+) from "./test.ns";
+
 struct Dog {
     name str;
     p Person;
 }
 
-import (
-    Test
-) from "./test.ns";
+
+

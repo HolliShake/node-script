@@ -20,6 +20,18 @@ func IsAbsolutePath(path string) bool {
 	return filepath.IsAbs(path)
 }
 
+func GetFileName(path string) string {
+	return filepath.Base(path)
+}
+
+func GetFileNameWithoutExtension(path string) string {
+	return strings.TrimSuffix(filepath.Base(path), filepath.Ext(path))
+}
+
+func GetFileExtension(path string) string {
+	return filepath.Ext(path)
+}
+
 func GetDir(path string) string {
 	if !IsAbsolutePath(path) {
 		panic("path must be an absolute path")

@@ -49,7 +49,7 @@ const (
 	AstAndAssign      AstType = iota
 	AstOrAssign       AstType = iota
 	AstXorAssign      AstType = iota
-	AstTypeOptional   AstType = iota // Typing
+	AstTypePointer    AstType = iota
 	AstTypeInt8       AstType = iota // Typing
 	AstTypeInt16      AstType = iota // Typing
 	AstTypeInt32      AstType = iota // Typing

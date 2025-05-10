@@ -1,12 +1,24 @@
 import ( Dog ) from "./test.ns";
 
-
 struct Person {
     name str;
-    age i32;
-    pet Dog;
+    age  i32;
+    pet  Dog;
+}
+
+struct King {
+    name str;
+    age  i32;
+    pet  Dog;
 }
 
 func (p Person) getPet() Dog {
 
+}
+
+
+func main(args [str]) {
+    for (var x i32 = 0;x < 2;x++) {
+        
+    }
 }

@@ -901,8 +901,25 @@ func (parser *TParser) baseType() *TAst {
 	return parser.terminal()
 }
 
-func (parser *TParser) typeOrNil() *TAst {
+func (parser *TParser) pointerType() *TAst {
 	dtypeAst := parser.baseType()
+	if dtypeAst == nil {
+		return nil
+	}
+	for parser.matchV("*") {
+		ended := parser.look.Position
+		parser.acceptV("*")
+		dtypeAst = AstSingle(
+			AstTypePointer,
+			dtypeAst.Position.Merge(ended),
+			dtypeAst,
+		)
+	}
+	return dtypeAst
+}
+
+func (parser *TParser) typeOrNil() *TAst {
+	dtypeAst := parser.pointerType()
 	if dtypeAst == nil {
 		return nil
 	}

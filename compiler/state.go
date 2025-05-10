@@ -6,14 +6,15 @@ import (
 
 type TState struct {
 	// The current state of the parser
-	TI08 *types.TTyping
-	TI16 *types.TTyping
-	TI32 *types.TTyping
-	TI64 *types.TTyping
-	TNum *types.TTyping
-	TStr *types.TTyping
-	TBit *types.TTyping
-	TNil *types.TTyping
+	Files []TFileJob
+	TI08  *types.TTyping
+	TI16  *types.TTyping
+	TI32  *types.TTyping
+	TI64  *types.TTyping
+	TNum  *types.TTyping
+	TStr  *types.TTyping
+	TBit  *types.TTyping
+	TNil  *types.TTyping
 }
 
 func CreateState() *TState {
@@ -28,4 +29,27 @@ func CreateState() *TState {
 	state.TBit = types.TBool()
 	state.TNil = types.TVoid()
 	return state
+}
+
+func (state *TState) SetFile(files []TFileJob) {
+	state.Files = files
+}
+
+func (state *TState) HasFile(path string) bool {
+	for _, file := range state.Files {
+		if file.Path == path {
+			return true
+		}
+	}
+	return false
+}
+
+func (state *TState) GetFile(path string) TFileJob {
+	for _, file := range state.Files {
+		if file.Path == path {
+			return file
+		}
+	}
+	RaiseSystemError("file not found")
+	return TFileJob{}
 }

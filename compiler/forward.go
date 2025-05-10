@@ -196,6 +196,14 @@ func (f *TForward) forwardStruct(fileJob TFileJob, node *TAst) {
 			nameNode.Position,
 		)
 	}
+	if len(namesNode) <= 0 {
+		RaiseLanguageCompileError(
+			fileJob.Path,
+			fileJob.Data,
+			"invalid struct, struct must have at least one attribute",
+			node.Position,
+		)
+	}
 	if fileJob.Env.HasLocalSymbol(nameNode.Str0) {
 		RaiseLanguageCompileError(
 			fileJob.Path,
@@ -245,7 +253,7 @@ func (f *TForward) forwardStruct(fileJob TFileJob, node *TAst) {
 	}
 	fileJob.Env.AddSymbol(TSymbol{
 		Name:         nameNode.Str0,
-		DataType:     types.TStruct(nameNode.Str0, attributes),
+		DataType:     types.TStruct(JoinVariableName(GetFileNameWithoutExtension(fileJob.Path), nameNode.Str0), attributes),
 		Position:     node.Position,
 		IsGlobal:     true,
 		IsConst:      true,
@@ -262,6 +270,14 @@ func (f *TForward) forwardImport(fileJob TFileJob, node *TAst) {
 			fileJob.Data,
 			"invalid import path, import path must be in a form of string",
 			pathNode.Position,
+		)
+	}
+	if len(namesNode) <= 0 {
+		RaiseLanguageCompileError(
+			fileJob.Path,
+			fileJob.Data,
+			"invalid import, import must have at least one attribute",
+			node.Position,
 		)
 	}
 	if !(strings.HasPrefix(pathNode.Str0, "./") || strings.HasPrefix(pathNode.Str0, "../")) {
@@ -321,12 +337,9 @@ func (f *TForward) forwardImport(fileJob TFileJob, node *TAst) {
 			)
 		}
 		if !childFile.Env.HasLocalSymbol(nameNode.Str0) {
-			RaiseLanguageCompileError(
-				fileJob.Path,
-				fileJob.Data,
-				"imported symbol not found",
-				nameNode.Position,
-			)
+			// If symbol not found, skip it.
+			// let analyzer handle it.
+			continue
 		}
 		if fileJob.Env.HasGlobalSymbol(nameNode.Str0) {
 			RaiseLanguageCompileError(
@@ -382,7 +395,7 @@ func (f *TForward) build() {
 			RaiseLanguageCompileError(
 				missingType.file.Path,
 				missingType.file.Data,
-				"missing type",
+				"missing type, or type is invalid",
 				missingType.TypeAst.Position,
 			)
 		}
