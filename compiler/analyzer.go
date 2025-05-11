@@ -233,7 +233,7 @@ func (analyzer *TAnalyzer) statement(node *TAst) {
 	switch node.Ttype {
 	case AstStruct:
 		analyzer.visitStruct(node)
-	case AstFunc,
+	case AstDefine,
 		AstMethod:
 		analyzer.visitFunc(node)
 	case AstImport:
@@ -274,6 +274,15 @@ func (analyzer *TAnalyzer) visitStruct(node *TAst) {
 			nameNode.Position,
 		)
 	}
+	// Struct name must use pascal case
+	if !IsPascalCase(nameNode.Str0) {
+		RaiseLanguageCompileError(
+			analyzer.file.Path,
+			analyzer.file.Data,
+			"invalid struct name, struct name must be in a form of pascal case",
+			nameNode.Position,
+		)
+	}
 	if len(namesNode) <= 0 {
 		RaiseLanguageCompileError(
 			analyzer.file.Path,
@@ -302,6 +311,15 @@ func (analyzer *TAnalyzer) visitStruct(node *TAst) {
 				analyzer.file.Path,
 				analyzer.file.Data,
 				"invalid attribute name, attribute name must be in a form of identifier",
+				attrNode.Position,
+			)
+		}
+		// Attribute name must use pascal case
+		if !IsPascalCase(attrNode.Str0) {
+			RaiseLanguageCompileError(
+				analyzer.file.Path,
+				analyzer.file.Data,
+				"invalid attribute name, struct attribute must be in a form of pascal case",
 				attrNode.Position,
 			)
 		}
@@ -356,6 +374,30 @@ func (analyzer *TAnalyzer) visitFunc(node *TAst) {
 	paramNamesNode := node.AstArr0
 	paramTypesNode := node.AstArr1
 	childrenNode := node.AstArr2
+	if nameNode.Ttype != AstIDN {
+		RaiseLanguageCompileError(
+			analyzer.file.Path,
+			analyzer.file.Data,
+			"invalid function name, function name must be in a form of identifier",
+			nameNode.Position,
+		)
+	}
+	// Function name must use camel case
+	if !isMethod && !IsCamelCase(nameNode.Str0) {
+		RaiseLanguageCompileError(
+			analyzer.file.Path,
+			analyzer.file.Data,
+			"invalid function name, function name must be in a form of camel case",
+			nameNode.Position,
+		)
+	} else if isMethod && !IsPascalCase(nameNode.Str0) {
+		RaiseLanguageCompileError(
+			analyzer.file.Path,
+			analyzer.file.Data,
+			"invalid method name, method name must be in a form of pascal case",
+			nameNode.Position,
+		)
+	}
 	analyzer.write("func", false)
 	analyzer.srcSp()
 	if isMethod {
@@ -372,6 +414,23 @@ func (analyzer *TAnalyzer) visitFunc(node *TAst) {
 	analyzer.write("(", false)
 	for index, paramNameNode := range paramNamesNode {
 		paramTypeNode := paramTypesNode[index]
+		if paramNameNode.Ttype != AstIDN {
+			RaiseLanguageCompileError(
+				analyzer.file.Path,
+				analyzer.file.Data,
+				"invalid parameter name, parameter name must be in a form of identifier",
+				paramNameNode.Position,
+			)
+		}
+		// Parameter name must use camel case
+		if !IsCamelCase(paramNameNode.Str0) {
+			RaiseLanguageCompileError(
+				analyzer.file.Path,
+				analyzer.file.Data,
+				"invalid parameter name, parameter name must be in a form of camel case",
+				paramNameNode.Position,
+			)
+		}
 		analyzer.write(fmt.Sprintf("%s %s", paramNameNode.Str0, analyzer.getType(paramTypeNode).ToGoType()), false)
 		if index < len(paramNamesNode)-1 {
 			analyzer.srcNl()
@@ -515,6 +574,15 @@ func (analyzer *TAnalyzer) visitVar(node *TAst) {
 				nameNode.Position,
 			)
 		}
+		// Global variable must use pascal case
+		if !IsPascalCase(nameNode.Str0) {
+			RaiseLanguageCompileError(
+				analyzer.file.Path,
+				analyzer.file.Data,
+				"invalid variable name, global variable must be in a form of pascal case",
+				nameNode.Position,
+			)
+		}
 		dataType := analyzer.getType(typeNode)
 		if types.IsVoid(dataType) {
 			RaiseLanguageCompileError(
@@ -580,6 +648,15 @@ func (analyzer *TAnalyzer) visitLocal(node *TAst) {
 				analyzer.file.Path,
 				analyzer.file.Data,
 				"invalid variable name, variable name must be in a form of identifier",
+				nameNode.Position,
+			)
+		}
+		// Local variable must use camel case
+		if !IsCamelCase(nameNode.Str0) {
+			RaiseLanguageCompileError(
+				analyzer.file.Path,
+				analyzer.file.Data,
+				"invalid variable name, local variable must be in a form of camel case",
 				nameNode.Position,
 			)
 		}

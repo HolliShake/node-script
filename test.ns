@@ -1,15 +1,15 @@
 import ( Person, King ) from "./syntax.ns";
 
 struct Dog {
-    name str;
-    age i32;
+    Name str;
+    Age i32;
 }
 
-func (d Dog) getName() str {
+define (d Dog) GetName() str {
 
 }
 
-func name() str {
+define name() str {
     
 }
 

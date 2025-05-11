@@ -1,24 +1,23 @@
 import ( Dog ) from "./test.ns";
 
-var DATA i32 = 100, TYPE str = "bool";
+var DATA i32 = 100, TYPE str = "bool", PascalTest i8 = 10;
 
 struct Person {
-    name str;
-    age  i32;
-    pet  Dog;
+    Name str;
+    Age  i32;
+    Pet  Dog;
 }
 
 struct King {
-    name str;
-    age  i32;
-    pet  Dog;
+    Name str;
+    Age  i32;
+    Pet  Dog;
 }
 
-func (p Person) getPet() Dog {
+define (p Person) GetPet() Dog {
 
 }
 
-
-func main(args [str]) i32 {
-    local x i32;
+define main(args [str]) i32 {
+    local x i32, y i64 = 10000;
 }

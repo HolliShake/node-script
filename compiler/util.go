@@ -9,13 +9,13 @@ import (
 	"golang.org/x/text/language"
 )
 
-var pascalCaseRegex = regexp.MustCompile(`^([A-Z][a-z0-9]*)+$`)
+var pascalCaseRegex = regexp.MustCompile(`^[A-Z][a-z0-9]*(?:[A-Z][a-z0-9]*)*$`)
 
-var camelCaseRegex = regexp.MustCompile(`^[a-z]+(?:[A-Z][a-z0-9]*)*$`)
+var camelCaseRegex = regexp.MustCompile(`^[a-z][a-z0-9]*(?:[A-Z][a-z0-9]*)*$`)
 
-var snakeCaseRegex = regexp.MustCompile(`^[a-z]+(_[a-z]+)*$`)
+var snakeCaseRegex = regexp.MustCompile(`^[a-z][a-z0-9]*(?:_[a-z][a-z0-9]*)*$`)
 
-var capitalCaseRegex = regexp.MustCompile(`^[A-Z]+$`)
+var capitalCaseRegex = regexp.MustCompile(`^[A-Z][A-Z0-9]*$`)
 
 var isFunctionCallRegex = regexp.MustCompile(`^[a-zA-Z0-9_]+\([^\)]*\)$`)
 
