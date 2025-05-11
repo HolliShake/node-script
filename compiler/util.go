@@ -1,6 +1,7 @@
 package main
 
 import (
+	"math"
 	"regexp"
 	"strings"
 
@@ -59,4 +60,17 @@ func JoinVariableName(origin, name string) string {
 		return name
 	}
 	return ToSnakeCase(origin) + "_" + name
+}
+
+func SizeOfInt(wholeNumber int64) byte {
+	if wholeNumber >= math.MinInt8 && wholeNumber <= math.MaxInt8 {
+		return 8
+	}
+	if wholeNumber >= math.MinInt16 && wholeNumber <= math.MaxInt16 {
+		return 16
+	}
+	if wholeNumber >= math.MinInt32 && wholeNumber <= math.MaxInt32 {
+		return 32
+	}
+	return 64
 }

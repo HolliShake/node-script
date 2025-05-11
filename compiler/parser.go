@@ -1182,6 +1182,7 @@ func (parser *TParser) varDecl() *TAst {
 	types = append(types, typeN)
 	valus = append(valus, value)
 	for parser.matchV(",") {
+		parser.acceptV(",")
 		nameN = parser.terminal()
 		if nameN == nil {
 			RaiseLanguageCompileError(
@@ -1237,6 +1238,7 @@ func (parser *TParser) constDecl() *TAst {
 	types = append(types, typeN)
 	valus = append(valus, value)
 	for parser.matchV(",") {
+		parser.acceptV(",")
 		nameN = parser.terminal()
 		if nameN == nil {
 			RaiseLanguageCompileError(
@@ -1292,6 +1294,7 @@ func (parser *TParser) localDecl() *TAst {
 	types = append(types, typeN)
 	valus = append(valus, value)
 	for parser.matchV(",") {
+		parser.acceptV(",")
 		nameN = parser.terminal()
 		if nameN == nil {
 			RaiseLanguageCompileError(

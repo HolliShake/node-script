@@ -3,58 +3,62 @@ package main
 import (
 	"dev/types"
 	"fmt"
+	"strconv"
 	"strings"
 )
 
 type TAnalyzer struct {
 	state *TState
 	file  TFileJob
+	scope *TScope
 	tab   int
 	src   string
+	stack *TEvaluationStack
 }
 
 func CreateAnalyzer(state *TState, file TFileJob) *TAnalyzer {
 	analyzer := new(TAnalyzer)
 	analyzer.state = state
 	analyzer.file = file
+	analyzer.scope = nil
 	analyzer.tab = 0
 	analyzer.src = ""
+	analyzer.stack = CreateEvaluationStack()
 	return analyzer
 }
 
 // Source UTIL
-func (analyzer *TAnalyzer) incTab() {
+func (analyzer *TAnalyzer) incTb() {
 	analyzer.tab++
 }
 
-func (analyzer *TAnalyzer) decTab() {
+func (analyzer *TAnalyzer) decTb() {
 	analyzer.tab--
 }
 
-func (analyzer *TAnalyzer) sourceTab() {
+func (analyzer *TAnalyzer) srcTb() {
 	for i := 0; i < analyzer.tab; i++ {
 		analyzer.src += "\t"
 	}
 }
 
-func (analyzer *TAnalyzer) sourceNewline() {
+func (analyzer *TAnalyzer) srcNl() {
 	analyzer.src += "\n"
 }
 
-func (analyzer *TAnalyzer) sourceSpace() {
+func (analyzer *TAnalyzer) srcSp() {
 	analyzer.src += " "
 }
 
-func (analyzer *TAnalyzer) write(part string) {
+func (analyzer *TAnalyzer) write(part string, newline bool) {
 	analyzer.src += part
-}
-
-func (analyzer *TAnalyzer) writeLine(part string) {
-	analyzer.src += part + "\n"
+	if newline {
+		analyzer.src += "\n"
+	}
 }
 
 func (analyzer *TAnalyzer) writePosition(position TPosition) {
-	analyzer.writeLine(fmt.Sprintf("//line %s:%d", analyzer.file.Path, position.SLine))
+	analyzer.write(fmt.Sprintf("//line %s:%d", analyzer.file.Path, position.SLine), true)
 }
 
 // Begin
@@ -146,15 +150,83 @@ func (analyzer *TAnalyzer) getType(node *TAst) *types.TTyping {
 }
 
 func (analyzer *TAnalyzer) expression(node *TAst) {
-	// switch node.Ttype {
-	// case AstTypeBinary:
-	// 	analyzer.expression(node.Left)
-	// 	analyzer.expression(node.Right)
-	// case AstTypeUnary:
-	// 	analyzer.expression(node.Child)
-	// case AstTypeLiteral:
-	// 	analyzer.literal(node)
-	// }
+	switch node.Ttype {
+	case AstInt:
+		i64, err := strconv.ParseInt(node.Str0, 10, 64)
+		if err != nil {
+			RaiseLanguageCompileError(
+				analyzer.file.Path,
+				analyzer.file.Data,
+				fmt.Sprintf("invalid integer value %s", node.Str0),
+				node.Position,
+			)
+		}
+		analyzer.write(node.Str0, false)
+		switch SizeOfInt(i64) {
+		case 8:
+			analyzer.stack.Push(CreateValue(
+				analyzer.state.TI08,
+				int8(i64),
+			))
+		case 16:
+			analyzer.stack.Push(CreateValue(
+				analyzer.state.TI16,
+				int16(i64),
+			))
+		case 32:
+			analyzer.stack.Push(CreateValue(
+				analyzer.state.TI32,
+				int32(i64),
+			))
+		case 64:
+			analyzer.stack.Push(CreateValue(
+				analyzer.state.TI64,
+				i64,
+			))
+		default:
+			analyzer.stack.Push(CreateValue(
+				analyzer.state.TI08,
+				int8(i64),
+			))
+		}
+	case AstNum:
+		f64, err := strconv.ParseFloat(node.Str0, 64)
+		if err != nil {
+			RaiseLanguageCompileError(
+				analyzer.file.Path,
+				analyzer.file.Data,
+				fmt.Sprintf("invalid float value %s", node.Str0),
+				node.Position,
+			)
+		}
+		analyzer.write(node.Str0, false)
+		analyzer.stack.Push(CreateValue(
+			analyzer.state.TNum,
+			f64,
+		))
+	case AstStr:
+		analyzer.write(fmt.Sprintf("\"%s\"", node.Str0), false)
+		analyzer.stack.Push(CreateValue(
+			analyzer.state.TStr,
+			node.Str0,
+		))
+	case AstBool:
+		analyzer.write(node.Str0, false)
+		analyzer.stack.Push(CreateValue(
+			analyzer.state.TBit,
+			node.Str0 == "true",
+		))
+	case AstNull:
+		analyzer.write("nil", false)
+		analyzer.stack.Push(CreateValue(analyzer.state.TNil, nil))
+	default:
+		RaiseLanguageCompileError(
+			analyzer.file.Path,
+			analyzer.file.Data,
+			"not implemented statement",
+			node.Position,
+		)
+	}
 }
 
 func (analyzer *TAnalyzer) statement(node *TAst) {
@@ -166,18 +238,29 @@ func (analyzer *TAnalyzer) statement(node *TAst) {
 		analyzer.visitFunc(node)
 	case AstImport:
 		analyzer.visitImport(node)
-		// default:
-		// 	RaiseLanguageCompileError(
-		// 		analyzer.file.Path,
-		// 		analyzer.file.Data,
-		// 		"not implemented statement",
-		// 		node.Position,
-		// 	)
+	case AstVar:
+		analyzer.visitVar(node)
+	default:
+		RaiseLanguageCompileError(
+			analyzer.file.Path,
+			analyzer.file.Data,
+			"not implemented statement",
+			node.Position,
+		)
 	}
 }
 
 func (analyzer *TAnalyzer) visitStruct(node *TAst) {
+	if !analyzer.scope.InGlobal() {
+		RaiseLanguageCompileError(
+			analyzer.file.Path,
+			analyzer.file.Data,
+			"struct is not allowed here",
+			node.Position,
+		)
+	}
 	analyzer.writePosition(node.Position)
+	analyzer.scope = CreateScope(analyzer.scope, ScopeStruct)
 	nameNode := node.Ast0
 	namesNode := node.AstArr0
 	typesNode := node.AstArr1
@@ -206,10 +289,10 @@ func (analyzer *TAnalyzer) visitStruct(node *TAst) {
 		)
 	}
 	thisStruct := analyzer.file.Env.GetSymbol(nameNode.Str0)
-	analyzer.write(fmt.Sprintf("type %s struct", JoinVariableName(GetFileNameWithoutExtension(analyzer.file.Path), nameNode.Str0)))
-	analyzer.sourceSpace()
-	analyzer.writeLine("{")
-	analyzer.incTab()
+	analyzer.write(fmt.Sprintf("type %s struct", JoinVariableName(GetFileNameWithoutExtension(analyzer.file.Path), nameNode.Str0)), false)
+	analyzer.srcSp()
+	analyzer.write("{", true)
+	analyzer.incTb()
 	for index, attrNode := range namesNode {
 		typeNode := typesNode[index]
 		if attrNode.Ttype != AstIDN {
@@ -241,62 +324,73 @@ func (analyzer *TAnalyzer) visitStruct(node *TAst) {
 				}
 			}
 		}
-		analyzer.sourceTab()
-		analyzer.write(fmt.Sprintf("%s %s", attrNode.Str0, dataType.ToGoType()))
+		analyzer.srcTb()
+		analyzer.write(fmt.Sprintf("%s %s", attrNode.Str0, dataType.ToGoType()), false)
 		if index < len(namesNode)-1 {
-			analyzer.sourceNewline()
+			analyzer.srcNl()
 		}
 	}
-	analyzer.decTab()
-	analyzer.sourceNewline()
-	analyzer.write("}")
+	analyzer.decTb()
+	analyzer.srcNl()
+	analyzer.write("}", false)
+	analyzer.scope = analyzer.scope.Parent
 }
 
 func (analyzer *TAnalyzer) visitFunc(node *TAst) {
+	if !analyzer.scope.InGlobal() {
+		RaiseLanguageCompileError(
+			analyzer.file.Path,
+			analyzer.file.Data,
+			"function is not allowed here",
+			node.Position,
+		)
+	}
 	analyzer.writePosition(node.Position)
+	analyzer.scope = CreateScope(analyzer.scope, ScopeFunction)
 	isMethod := node.Ttype == AstMethod
 	nameNode := node.Ast0
 	returnTypeNode := node.Ast1
 	paramNamesNode := node.AstArr0
 	paramTypesNode := node.AstArr1
 	childrenNode := node.AstArr2
-	analyzer.write("func")
-	analyzer.sourceSpace()
+	analyzer.write("func", false)
+	analyzer.srcSp()
 	if isMethod {
-		analyzer.write("(")
+		analyzer.write("(", false)
 		thisArgNode := paramNamesNode[0]
 		thisArgTypeNode := paramTypesNode[0]
-		analyzer.write(fmt.Sprintf("%s %s", thisArgNode.Str0, analyzer.getType(thisArgTypeNode).ToGoType()))
-		analyzer.write(")")
-		analyzer.sourceSpace()
+		analyzer.write(fmt.Sprintf("%s %s", thisArgNode.Str0, analyzer.getType(thisArgTypeNode).ToGoType()), false)
+		analyzer.write(")", false)
+		analyzer.srcSp()
 		paramNamesNode = paramNamesNode[1:]
 		paramTypesNode = paramTypesNode[1:]
 	}
-	analyzer.write(JoinVariableName(GetFileNameWithoutExtension(analyzer.file.Path), nameNode.Str0))
-	analyzer.write("(")
+	analyzer.write(JoinVariableName(GetFileNameWithoutExtension(analyzer.file.Path), nameNode.Str0), false)
+	analyzer.write("(", false)
 	for index, paramNameNode := range paramNamesNode {
 		paramTypeNode := paramTypesNode[index]
-		analyzer.write(fmt.Sprintf("%s %s", paramNameNode.Str0, analyzer.getType(paramTypeNode).ToGoType()))
+		analyzer.write(fmt.Sprintf("%s %s", paramNameNode.Str0, analyzer.getType(paramTypeNode).ToGoType()), false)
 		if index < len(paramNamesNode)-1 {
-			analyzer.sourceNewline()
+			analyzer.srcNl()
 		}
 	}
-	analyzer.write(")")
+	analyzer.write(")", false)
 	returnType := analyzer.getType(returnTypeNode)
-	analyzer.sourceSpace()
-	analyzer.write(returnType.ToGoType())
-	analyzer.sourceSpace()
-	analyzer.writeLine("{")
-	analyzer.incTab()
+	analyzer.srcSp()
+	analyzer.write(returnType.ToGoType(), false)
+	analyzer.srcSp()
+	analyzer.write("{", true)
+	analyzer.incTb()
 	for index, childNode := range childrenNode {
 		analyzer.statement(childNode)
 		if index < len(childrenNode)-1 {
-			analyzer.sourceNewline()
+			analyzer.srcNl()
 		}
 	}
-	analyzer.decTab()
-	analyzer.sourceNewline()
-	analyzer.write("}")
+	analyzer.decTb()
+	analyzer.srcNl()
+	analyzer.write("}", false)
+	analyzer.scope = analyzer.scope.Parent
 }
 
 // Imports are already handled by Forwarder
@@ -305,6 +399,14 @@ func (analyzer *TAnalyzer) visitFunc(node *TAst) {
 // However, we need to write "// import" in the source code
 // to make it easier to read.
 func (analyzer *TAnalyzer) visitImport(node *TAst) {
+	if !analyzer.scope.InGlobal() {
+		RaiseLanguageCompileError(
+			analyzer.file.Path,
+			analyzer.file.Data,
+			"import is not allowed here",
+			node.Position,
+		)
+	}
 	analyzer.writePosition(node.Position)
 	pathNode := node.Ast0
 	namesNode := node.AstArr0
@@ -371,19 +473,63 @@ func (analyzer *TAnalyzer) visitImport(node *TAst) {
 			}
 			analyzer.file.Env.AddSymbol(importedSymbol)
 		}
-		analyzer.write(fmt.Sprintf("/* import %s -> %s */", analyzer.file.Path, nameNode.Str0))
+		analyzer.write(fmt.Sprintf("/* import %s -> %s */", analyzer.file.Path, nameNode.Str0), false)
 		if index < len(namesNode)-1 {
-			analyzer.sourceNewline()
+			analyzer.srcNl()
 		}
 	}
 }
 
+func (analyzer *TAnalyzer) visitVar(node *TAst) {
+	if !analyzer.scope.InGlobal() {
+		RaiseLanguageCompileError(
+			analyzer.file.Path,
+			analyzer.file.Data,
+			"variable is not allowed here",
+			node.Position,
+		)
+	}
+	analyzer.writePosition(node.Position)
+	namesNode := node.AstArr0
+	typesNode := node.AstArr1
+	valusNode := node.AstArr2
+	analyzer.write("var", false)
+	analyzer.srcSp()
+	analyzer.write("(", true)
+	analyzer.incTb()
+	for index, nameNode := range namesNode {
+		typeNode := typesNode[index]
+		valuNode := valusNode[index]
+		if nameNode.Ttype != AstIDN {
+			RaiseLanguageCompileError(
+				analyzer.file.Path,
+				analyzer.file.Data,
+				"invalid variable name, variable name must be in a form of identifier",
+				nameNode.Position,
+			)
+		}
+		analyzer.srcTb()
+		analyzer.write(fmt.Sprintf("%s %s", JoinVariableName(GetFileNameWithoutExtension(analyzer.file.Path), nameNode.Str0), analyzer.getType(typeNode).ToGoType()), false)
+		if valuNode != nil {
+			analyzer.write(" = ", false)
+			analyzer.expression(valuNode)
+		}
+		if index < len(namesNode)-1 {
+			analyzer.srcNl()
+		}
+	}
+	analyzer.decTb()
+	analyzer.srcNl()
+	analyzer.write(")", false)
+}
+
 func (analyzer *TAnalyzer) program(node *TAst) {
-	analyzer.writeLine("package main")
+	analyzer.write("package main", true)
+	analyzer.scope = CreateScope(nil, ScopeGlobal)
 	for index, child := range node.AstArr0 {
 		analyzer.statement(child)
 		if index < len(node.AstArr0)-1 {
-			analyzer.sourceNewline()
+			analyzer.srcNl()
 		}
 	}
 }
