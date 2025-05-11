@@ -16,6 +16,7 @@ const (
 type TScope struct {
 	Parent *TScope
 	Type   TScopeType
+	Env    *TEnv
 	Return *types.TTyping
 }
 
@@ -23,6 +24,11 @@ func CreateScope(parent *TScope, scopeType TScopeType) *TScope {
 	scope := new(TScope)
 	scope.Parent = parent
 	scope.Type = scopeType
+	if parent != nil {
+		scope.Env = CreateEnv(parent.Env)
+	} else {
+		scope.Env = CreateEnv(nil)
+	}
 	scope.Return = nil
 	return scope
 }

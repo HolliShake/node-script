@@ -240,6 +240,8 @@ func (analyzer *TAnalyzer) statement(node *TAst) {
 		analyzer.visitImport(node)
 	case AstVar:
 		analyzer.visitVar(node)
+	case AstLocal:
+		analyzer.visitLocal(node)
 	default:
 		RaiseLanguageCompileError(
 			analyzer.file.Path,
@@ -347,6 +349,7 @@ func (analyzer *TAnalyzer) visitFunc(node *TAst) {
 	}
 	analyzer.writePosition(node.Position)
 	analyzer.scope = CreateScope(analyzer.scope, ScopeFunction)
+	analyzer.scope = CreateScope(analyzer.scope, ScopeLocal)
 	isMethod := node.Ttype == AstMethod
 	nameNode := node.Ast0
 	returnTypeNode := node.Ast1
@@ -390,6 +393,7 @@ func (analyzer *TAnalyzer) visitFunc(node *TAst) {
 	analyzer.decTb()
 	analyzer.srcNl()
 	analyzer.write("}", false)
+	analyzer.scope = analyzer.scope.Parent
 	analyzer.scope = analyzer.scope.Parent
 }
 
@@ -489,7 +493,10 @@ func (analyzer *TAnalyzer) visitVar(node *TAst) {
 			node.Position,
 		)
 	}
-	analyzer.writePosition(node.Position)
+	if analyzer.scope.InGlobal() {
+		analyzer.srcTb()
+		analyzer.writePosition(node.Position)
+	}
 	namesNode := node.AstArr0
 	typesNode := node.AstArr1
 	valusNode := node.AstArr2
@@ -508,11 +515,32 @@ func (analyzer *TAnalyzer) visitVar(node *TAst) {
 				nameNode.Position,
 			)
 		}
+		dataType := analyzer.getType(typeNode)
+		if types.IsVoid(dataType) {
+			RaiseLanguageCompileError(
+				analyzer.file.Path,
+				analyzer.file.Data,
+				"invalid variable type, variable type cannot be void",
+				nameNode.Position,
+			)
+		}
 		analyzer.srcTb()
-		analyzer.write(fmt.Sprintf("%s %s", JoinVariableName(GetFileNameWithoutExtension(analyzer.file.Path), nameNode.Str0), analyzer.getType(typeNode).ToGoType()), false)
+		analyzer.write(fmt.Sprintf("%s %s", JoinVariableName(GetFileNameWithoutExtension(analyzer.file.Path), nameNode.Str0), dataType.ToGoType()), false)
 		if valuNode != nil {
 			analyzer.write(" = ", false)
 			analyzer.expression(valuNode)
+			valueType := analyzer.stack.Pop().DataType
+			if !types.CanStore(dataType, valueType) {
+				RaiseLanguageCompileError(
+					analyzer.file.Path,
+					analyzer.file.Data,
+					fmt.Sprintf("cannot assign %s to %s", valueType.ToString(), dataType.ToString()),
+					nameNode.Position,
+				)
+			}
+		} else {
+			analyzer.write(" = ", false)
+			analyzer.write(dataType.DefaultValue(), false)
 		}
 		if index < len(namesNode)-1 {
 			analyzer.srcNl()
@@ -520,6 +548,84 @@ func (analyzer *TAnalyzer) visitVar(node *TAst) {
 	}
 	analyzer.decTb()
 	analyzer.srcNl()
+	analyzer.write(")", false)
+}
+
+func (analyzer *TAnalyzer) visitLocal(node *TAst) {
+	if !analyzer.scope.InLocal() || analyzer.scope.InSingle() {
+		RaiseLanguageCompileError(
+			analyzer.file.Path,
+			analyzer.file.Data,
+			"local variable is not allowed here",
+			node.Position,
+		)
+	}
+	if analyzer.scope.InGlobal() {
+		analyzer.srcTb()
+		analyzer.writePosition(node.Position)
+	}
+	namesNode := node.AstArr0
+	typesNode := node.AstArr1
+	valusNode := node.AstArr2
+	analyzer.srcTb()
+	analyzer.write("var", false)
+	analyzer.srcSp()
+	analyzer.write("(", true)
+	analyzer.incTb()
+	for index, nameNode := range namesNode {
+		typeNode := typesNode[index]
+		valuNode := valusNode[index]
+		if nameNode.Ttype != AstIDN {
+			RaiseLanguageCompileError(
+				analyzer.file.Path,
+				analyzer.file.Data,
+				"invalid variable name, variable name must be in a form of identifier",
+				nameNode.Position,
+			)
+		}
+		dataType := analyzer.getType(typeNode)
+		if types.IsVoid(dataType) {
+			RaiseLanguageCompileError(
+				analyzer.file.Path,
+				analyzer.file.Data,
+				"invalid variable type, variable type cannot be void",
+				nameNode.Position,
+			)
+		}
+		analyzer.srcTb()
+		analyzer.write(fmt.Sprintf("%s %s", JoinVariableName(GetFileNameWithoutExtension(analyzer.file.Path), nameNode.Str0), dataType.ToGoType()), false)
+		if valuNode != nil {
+			analyzer.write(" = ", false)
+			analyzer.expression(valuNode)
+			valueType := analyzer.stack.Pop().DataType
+			if !types.CanStore(dataType, valueType) {
+				RaiseLanguageCompileError(
+					analyzer.file.Path,
+					analyzer.file.Data,
+					fmt.Sprintf("cannot assign %s to %s", valueType.ToString(), dataType.ToString()),
+					nameNode.Position,
+				)
+			}
+		} else {
+			analyzer.write(" = ", false)
+			analyzer.write(dataType.DefaultValue(), false)
+		}
+		if index < len(namesNode)-1 {
+			analyzer.srcNl()
+		}
+		analyzer.scope.Env.AddSymbol(TSymbol{
+			Name:         nameNode.Str0,
+			NameSpace:    nameNode.Str0,
+			DataType:     dataType,
+			Position:     nameNode.Position,
+			IsGlobal:     false,
+			IsConst:      false,
+			IsInitialize: valuNode != nil,
+		})
+	}
+	analyzer.decTb()
+	analyzer.srcNl()
+	analyzer.srcTb()
 	analyzer.write(")", false)
 }
 

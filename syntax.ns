@@ -1,6 +1,6 @@
 import ( Dog ) from "./test.ns";
 
-var DATA i32 = 100, TYPE str = "Hola Mundo!";
+var DATA i32 = 100, TYPE str = "bool";
 
 struct Person {
     name str;
@@ -20,5 +20,5 @@ func (p Person) getPet() Dog {
 
 
 func main(args [str]) i32 {
-    
+    local x i32;
 }

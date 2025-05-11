@@ -1,6 +1,6 @@
 package types
 
-func IsInt8(ttype *TTyping) bool {
+func IsInt08(ttype *TTyping) bool {
 	return ttype.size == TypeI08
 }
 
@@ -93,6 +93,44 @@ func IsValidElementType(ttype *TTyping) bool {
 	case TypeStruct:
 	default:
 		return false
+	}
+	return false
+}
+
+func CanStore(dst *TTyping, src *TTyping) bool {
+	if IsInt08(dst) && IsInt08(src) {
+		return true
+	}
+	if IsInt16(dst) && (IsInt08(src) ||
+		IsInt16(src)) {
+		return true
+	}
+	if IsInt32(dst) && (IsInt08(src) ||
+		IsInt16(src) ||
+		IsInt32(src)) {
+		return true
+	}
+	if IsInt64(dst) && (IsInt08(src) ||
+		IsInt16(src) ||
+		IsInt32(src) ||
+		IsInt64(src)) {
+		return true
+	}
+	if IsNum(dst) && (IsInt08(src) ||
+		IsInt16(src) ||
+		IsInt32(src) ||
+		IsInt64(src) ||
+		IsNum(src)) {
+		return true
+	}
+	if IsStr(dst) && IsStr(src) {
+		return true
+	}
+	if IsBool(dst) && IsBool(src) {
+		return true
+	}
+	if IsVoid(dst) && IsVoid(src) {
+		return true
 	}
 	return false
 }

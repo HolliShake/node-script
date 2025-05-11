@@ -5,7 +5,7 @@ type TEnv struct {
 	symbols []TSymbol
 }
 
-func CreatEnv(parent *TEnv) *TEnv {
+func CreateEnv(parent *TEnv) *TEnv {
 	env := new(TEnv)
 	env.Parent = parent
 	env.symbols = make([]TSymbol, 0)

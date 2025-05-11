@@ -89,8 +89,42 @@ func (t *TTyping) AddMethod(name string, dataType *TTyping) {
 	t.methods = append(t.methods, pair)
 }
 
+func (t *TTyping) DefaultValue() string {
+	switch t.size {
+	case TypeI08,
+		TypeI16,
+		TypeI32,
+		TypeI64:
+		return "0"
+	case TypeNum:
+		return "0.0"
+	case TypeStr:
+		return ""
+	case TypeBit:
+		return "false"
+	case TypeNil:
+		return "nil"
+	default:
+		panic("invalid type")
+	}
+}
 func (t *TTyping) ToString() string {
-	return t.repr
+	switch t.size {
+	case TypeI08,
+		TypeI16,
+		TypeI32,
+		TypeI64,
+		TypeNum,
+		TypeStr,
+		TypeBit,
+		TypeNil,
+		TypeMap,
+		TypeArr,
+		TypeStruct,
+		TypeFunc:
+		return t.repr
+	}
+	return "[invalid]"
 }
 
 func (t *TTyping) ToGoType() string {
@@ -120,7 +154,7 @@ func (t *TTyping) ToGoType() string {
 	case TypeFunc:
 		return "func{}"
 	default:
-		return "[invalid]"
+		panic("invalid type")
 	}
 }
 

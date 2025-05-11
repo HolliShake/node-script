@@ -184,7 +184,7 @@ func (f *TForward) getType(fileJob TFileJob, node *TAst) *types.TTyping {
 }
 
 func (f *TForward) forwardStruct(fileJob TFileJob, node *TAst) {
-	newEnv := CreatEnv(fileJob.Env)
+	newEnv := CreateEnv(fileJob.Env)
 	nameNode := node.Ast0
 	namesNode := node.AstArr0
 	typesNode := node.AstArr1
@@ -243,6 +243,7 @@ func (f *TForward) forwardStruct(fileJob TFileJob, node *TAst) {
 		}
 		newEnv.AddSymbol(TSymbol{
 			Name:         attrN.Str0,
+			NameSpace:    attrN.Str0,
 			DataType:     dataType,
 			Position:     attrN.Position,
 			IsGlobal:     false,
@@ -253,6 +254,7 @@ func (f *TForward) forwardStruct(fileJob TFileJob, node *TAst) {
 	}
 	fileJob.Env.AddSymbol(TSymbol{
 		Name:         nameNode.Str0,
+		NameSpace:    JoinVariableName(GetFileNameWithoutExtension(fileJob.Path), nameNode.Str0),
 		DataType:     types.TStruct(JoinVariableName(GetFileNameWithoutExtension(fileJob.Path), nameNode.Str0), attributes),
 		Position:     node.Position,
 		IsGlobal:     true,
@@ -311,7 +313,7 @@ func (f *TForward) forwardImport(fileJob TFileJob, node *TAst) {
 			Path:   actualPath,
 			Data:   parser.Tokenizer.Data,
 			Ast:    ast,
-			Env:    CreatEnv(nil),
+			Env:    CreateEnv(nil),
 			IsDone: true,
 		}
 		f.pushDelayed(TDelayedImport{
@@ -351,6 +353,7 @@ func (f *TForward) forwardImport(fileJob TFileJob, node *TAst) {
 		}
 		fileJob.Env.AddSymbol(TSymbol{
 			Name:         nameNode.Str0,
+			NameSpace:    JoinVariableName(GetFileNameWithoutExtension(childFile.Path), nameNode.Str0),
 			DataType:     childFile.Env.GetSymbol(nameNode.Str0).DataType,
 			Position:     nameNode.Position,
 			IsGlobal:     true,
@@ -414,7 +417,7 @@ func ForwardDeclairation(state *TState, path string, data []rune, ast *TAst) []T
 		Path:   path,
 		Data:   data,
 		Ast:    ast,
-		Env:    CreatEnv(nil),
+		Env:    CreateEnv(nil),
 		IsDone: false,
 	}
 
