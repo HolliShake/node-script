@@ -17,6 +17,7 @@ const (
 	TypeMap    TypeCode = 0xdeadbeef
 	TypeStruct TypeCode = 0x8badf00d
 	TypeFunc   TypeCode = 0x8badcafe
+	TypeTuple  TypeCode = 0x8badbeef
 )
 
 type TPair struct {
@@ -34,10 +35,11 @@ func CreatePair(name string, dataType *TTyping) *TPair {
 type TTyping struct {
 	repr      string
 	size      TypeCode
-	internal0 *TTyping
-	internal1 *TTyping
-	members   []*TPair
-	methods   []*TPair
+	internal0 *TTyping   // Array element | Map key
+	internal1 *TTyping   // Map value
+	elements  []*TTyping // Tuple elements
+	members   []*TPair   // Struct attribute | Function parameter
+	methods   []*TPair   // Type methods
 }
 
 func (t *TTyping) HasMember(name string) bool {
@@ -224,5 +226,11 @@ func TFunc(attributes []*TPair, returnType *TTyping) *TTyping {
 	typing := CreateTyping("func{}", TypeFunc)
 	typing.internal0 = returnType
 	typing.members = attributes
+	return typing
+}
+
+func TTuple(elements []*TTyping) *TTyping {
+	typing := CreateTyping("tuple", TypeTuple)
+	typing.elements = elements
 	return typing
 }

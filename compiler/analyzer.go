@@ -218,12 +218,29 @@ func (analyzer *TAnalyzer) expression(node *TAst) {
 		))
 	case AstNull:
 		analyzer.write("nil", false)
-		analyzer.stack.Push(CreateValue(analyzer.state.TNil, nil))
+		analyzer.stack.Push(CreateValue(
+			analyzer.state.TNil,
+			nil,
+		))
+	case AstTupleExpression:
+		tupleTypes := make([]*types.TTyping, 0)
+		for index, childNode := range node.AstArr0 {
+			analyzer.expression(childNode)
+			dataType := analyzer.stack.Pop().DataType
+			tupleTypes = append(tupleTypes, dataType)
+			if index < len(node.AstArr0)-1 {
+				analyzer.write(",", false)
+			}
+		}
+		analyzer.stack.Push(CreateValue(
+			types.TTuple(tupleTypes),
+			nil,
+		))
 	default:
 		RaiseLanguageCompileError(
 			analyzer.file.Path,
 			analyzer.file.Data,
-			"not implemented statement",
+			"not implemented expression",
 			node.Position,
 		)
 	}
@@ -235,13 +252,20 @@ func (analyzer *TAnalyzer) statement(node *TAst) {
 		analyzer.visitStruct(node)
 	case AstDefine,
 		AstMethod:
-		analyzer.visitFunc(node)
+		analyzer.visitDefine(node)
 	case AstImport:
 		analyzer.visitImport(node)
 	case AstVar:
 		analyzer.visitVar(node)
+	case AstConst:
+		analyzer.visitConst(node)
 	case AstLocal:
 		analyzer.visitLocal(node)
+	case AstEmptyStmnt:
+		analyzer.write("", false)
+	case AstExpressionStmnt:
+		analyzer.srcTb()
+		analyzer.expression(node.Ast0)
 	default:
 		RaiseLanguageCompileError(
 			analyzer.file.Path,
@@ -356,7 +380,7 @@ func (analyzer *TAnalyzer) visitStruct(node *TAst) {
 	analyzer.scope = analyzer.scope.Parent
 }
 
-func (analyzer *TAnalyzer) visitFunc(node *TAst) {
+func (analyzer *TAnalyzer) visitDefine(node *TAst) {
 	if !analyzer.scope.InGlobal() {
 		RaiseLanguageCompileError(
 			analyzer.file.Path,
@@ -619,6 +643,112 @@ func (analyzer *TAnalyzer) visitVar(node *TAst) {
 	analyzer.write(")", false)
 }
 
+func (analyzer *TAnalyzer) visitConst(node *TAst) {
+	if analyzer.scope.InSingle() {
+		RaiseLanguageCompileError(
+			analyzer.file.Path,
+			analyzer.file.Data,
+			"constant is not allowed here",
+			node.Position,
+		)
+	}
+	if analyzer.scope.InGlobal() {
+		analyzer.srcTb()
+		analyzer.writePosition(node.Position)
+	}
+	namesNode := node.AstArr0
+	typesNode := node.AstArr1
+	valusNode := node.AstArr2
+	analyzer.srcTb()
+	if analyzer.scope.InGlobal() {
+		analyzer.write("const", false)
+	} else {
+		analyzer.write("var", false)
+	}
+	analyzer.srcSp()
+	analyzer.write("(", true)
+	analyzer.incTb()
+	for index, nameNode := range namesNode {
+		typeNode := typesNode[index]
+		valuNode := valusNode[index]
+		if nameNode.Ttype != AstIDN {
+			RaiseLanguageCompileError(
+				analyzer.file.Path,
+				analyzer.file.Data,
+				"invalid constant name, constant name must be in a form of identifier",
+				nameNode.Position,
+			)
+		}
+		// Global variable must use pascal case
+		if analyzer.scope.InGlobal() && !IsPascalCase(nameNode.Str0) {
+			RaiseLanguageCompileError(
+				analyzer.file.Path,
+				analyzer.file.Data,
+				"invalid constant name, global constant name must be in a form of pascal case",
+				nameNode.Position,
+			)
+		} else if !analyzer.scope.InGlobal() && !IsCamelCase(nameNode.Str0) {
+			RaiseLanguageCompileError(
+				analyzer.file.Path,
+				analyzer.file.Data,
+				"invalid constant name, local constant name must be in a form of camel case",
+				nameNode.Position,
+			)
+		}
+		dataType := analyzer.getType(typeNode)
+		if types.IsVoid(dataType) {
+			RaiseLanguageCompileError(
+				analyzer.file.Path,
+				analyzer.file.Data,
+				"invalid constant type, constant type cannot be void",
+				nameNode.Position,
+			)
+		}
+		analyzer.srcTb()
+		analyzer.write(fmt.Sprintf("%s %s", JoinVariableName(GetFileNameWithoutExtension(analyzer.file.Path), nameNode.Str0), dataType.ToGoType()), false)
+		if analyzer.scope.InGlobal() && valuNode != nil && !IsConstantValueNode(valuNode) {
+			RaiseLanguageCompileError(
+				analyzer.file.Path,
+				analyzer.file.Data,
+				"invalid constant value, constant value must be a literal constant",
+				nameNode.Position,
+			)
+		}
+		if valuNode != nil {
+			analyzer.write(" = ", false)
+			analyzer.expression(valuNode)
+			valueType := analyzer.stack.Pop().DataType
+			if !types.CanStore(dataType, valueType) {
+				RaiseLanguageCompileError(
+					analyzer.file.Path,
+					analyzer.file.Data,
+					fmt.Sprintf("cannot assign %s to %s", valueType.ToString(), dataType.ToString()),
+					nameNode.Position,
+				)
+			}
+		} else {
+			analyzer.write(" = ", false)
+			analyzer.write(dataType.DefaultValue(), false)
+		}
+		if index < len(namesNode)-1 {
+			analyzer.srcNl()
+		}
+		analyzer.scope.Env.AddSymbol(TSymbol{
+			Name:         nameNode.Str0,
+			NameSpace:    nameNode.Str0,
+			DataType:     dataType,
+			Position:     nameNode.Position,
+			IsGlobal:     analyzer.scope.InGlobal(),
+			IsConst:      true,
+			IsInitialize: valuNode != nil,
+		})
+	}
+	analyzer.decTb()
+	analyzer.srcNl()
+	analyzer.srcTb()
+	analyzer.write(")", false)
+}
+
 func (analyzer *TAnalyzer) visitLocal(node *TAst) {
 	if !analyzer.scope.InLocal() || analyzer.scope.InSingle() {
 		RaiseLanguageCompileError(
@@ -689,6 +819,14 @@ func (analyzer *TAnalyzer) visitLocal(node *TAst) {
 		}
 		if index < len(namesNode)-1 {
 			analyzer.srcNl()
+		}
+		if analyzer.scope.Env.HasLocalSymbol(nameNode.Str0) {
+			RaiseLanguageCompileError(
+				analyzer.file.Path,
+				analyzer.file.Data,
+				"duplicate symbol name",
+				nameNode.Position,
+			)
 		}
 		analyzer.scope.Env.AddSymbol(TSymbol{
 			Name:         nameNode.Str0,

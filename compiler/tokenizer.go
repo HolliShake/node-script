@@ -275,12 +275,18 @@ func (tokenizer *TTokenizer) getSym() TToken {
 		'}',
 		'[',
 		']',
-		':',
 		';',
 		',',
 		'.':
 		value += string(tokenizer.look)
 		tokenizer.forward()
+	case ':':
+		value += string(tokenizer.look)
+		tokenizer.forward()
+		if tokenizer.look == '=' {
+			value += string(tokenizer.look)
+			tokenizer.forward()
+		}
 	case '?':
 		value += string(tokenizer.look)
 		tokenizer.forward()

@@ -394,7 +394,6 @@ func (parser *TParser) multiplicative() *TAst {
 				"missing right-hand expression",
 				lhs.Position,
 			)
-			return nil
 		}
 		lhs = AstBinary(
 			GetAstTypeByBinaryOp(opt),
@@ -423,7 +422,6 @@ func (parser *TParser) additive() *TAst {
 				"missing right-hand expression",
 				lhs.Position,
 			)
-			return nil
 		}
 		lhs = AstBinary(
 			GetAstTypeByBinaryOp(opt),
@@ -452,7 +450,6 @@ func (parser *TParser) shift() *TAst {
 				"missing right-hand expression",
 				lhs.Position,
 			)
-			return nil
 		}
 		lhs = AstBinary(
 			GetAstTypeByBinaryOp(opt),
@@ -482,7 +479,6 @@ func (parser *TParser) relational() *TAst {
 				"missing right-hand expression",
 				lhs.Position,
 			)
-			return nil
 		}
 		lhs = AstBinary(
 			GetAstTypeByBinaryOp(opt),
@@ -511,7 +507,6 @@ func (parser *TParser) equality() *TAst {
 				"missing right-hand expression",
 				lhs.Position,
 			)
-			return nil
 		}
 		lhs = AstBinary(
 			GetAstTypeByBinaryOp(opt),
@@ -540,7 +535,6 @@ func (parser *TParser) bitwise() *TAst {
 				"missing right-hand expression",
 				lhs.Position,
 			)
-			return nil
 		}
 		lhs = AstBinary(
 			GetAstTypeByBinaryOp(opt),
@@ -569,152 +563,6 @@ func (parser *TParser) logical() *TAst {
 				"missing right-hand expression",
 				lhs.Position,
 			)
-			return nil
-		}
-		lhs = AstBinary(
-			GetAstTypeByBinaryOp(opt),
-			lhs.Position.Merge(rhs.Position),
-			lhs,
-			rhs,
-			opt,
-		)
-	}
-	return lhs
-}
-
-func (parser *TParser) simpleAssign() *TAst {
-	lhs := parser.logical()
-	if lhs == nil {
-		return nil
-	}
-	for parser.matchV("=") {
-		opt := parser.look.Value
-		parser.acceptT(TokenSYM)
-		rhs := parser.logical()
-		if rhs == nil {
-			RaiseLanguageCompileError(
-				parser.Tokenizer.File,
-				parser.Tokenizer.Data,
-				"missing right-hand expression",
-				lhs.Position,
-			)
-			return nil
-		}
-		lhs = AstBinary(
-			GetAstTypeByBinaryOp(opt),
-			lhs.Position.Merge(rhs.Position),
-			lhs,
-			rhs,
-			opt,
-		)
-	}
-	return lhs
-}
-
-func (parser *TParser) mulAssign() *TAst {
-	lhs := parser.simpleAssign()
-	if lhs == nil {
-		return nil
-	}
-	for parser.matchV("*=") || parser.matchV("/=") || parser.matchV("%=") {
-		opt := parser.look.Value
-		parser.acceptT(TokenSYM)
-		rhs := parser.simpleAssign()
-		if rhs == nil {
-			RaiseLanguageCompileError(
-				parser.Tokenizer.File,
-				parser.Tokenizer.Data,
-				"missing right-hand expression",
-				lhs.Position,
-			)
-			return nil
-		}
-		lhs = AstBinary(
-			GetAstTypeByBinaryOp(opt),
-			lhs.Position.Merge(rhs.Position),
-			lhs,
-			rhs,
-			opt,
-		)
-	}
-	return lhs
-}
-
-func (parser *TParser) addAssign() *TAst {
-	lhs := parser.mulAssign()
-	if lhs == nil {
-		return nil
-	}
-	for parser.matchV("+=") || parser.matchV("-=") {
-		opt := parser.look.Value
-		parser.acceptT(TokenSYM)
-		rhs := parser.mulAssign()
-		if rhs == nil {
-			RaiseLanguageCompileError(
-				parser.Tokenizer.File,
-				parser.Tokenizer.Data,
-				"missing right-hand expression",
-				lhs.Position,
-			)
-			return nil
-		}
-		lhs = AstBinary(
-			GetAstTypeByBinaryOp(opt),
-			lhs.Position.Merge(rhs.Position),
-			lhs,
-			rhs,
-			opt,
-		)
-	}
-	return lhs
-}
-
-func (parser *TParser) shiftAssign() *TAst {
-	lhs := parser.addAssign()
-	if lhs == nil {
-		return nil
-	}
-	for parser.matchV("<<=") || parser.matchV(">>=") {
-		opt := parser.look.Value
-		parser.acceptT(TokenSYM)
-		rhs := parser.addAssign()
-		if rhs == nil {
-			RaiseLanguageCompileError(
-				parser.Tokenizer.File,
-				parser.Tokenizer.Data,
-				"missing right-hand expression",
-				lhs.Position,
-			)
-			return nil
-		}
-		lhs = AstBinary(
-			GetAstTypeByBinaryOp(opt),
-			lhs.Position.Merge(rhs.Position),
-			lhs,
-			rhs,
-			opt,
-		)
-	}
-	return lhs
-}
-
-func (parser *TParser) bitAssign() *TAst {
-	lhs := parser.shiftAssign()
-	if lhs == nil {
-		return nil
-	}
-	for parser.matchV("&=") || parser.matchV("|=") || parser.matchV("^=") {
-		opt := parser.look.Value
-		parser.acceptT(TokenSYM)
-		rhs := parser.shiftAssign()
-		if rhs == nil {
-			RaiseLanguageCompileError(
-				parser.Tokenizer.File,
-				parser.Tokenizer.Data,
-				"missing right-hand expression",
-				lhs.Position,
-			)
-			return nil
 		}
 		lhs = AstBinary(
 			GetAstTypeByBinaryOp(opt),
@@ -728,7 +576,7 @@ func (parser *TParser) bitAssign() *TAst {
 }
 
 func (parser *TParser) expression() *TAst {
-	return parser.bitAssign()
+	return parser.logical()
 }
 
 func (parser *TParser) mandatoryExpression() *TAst {
@@ -969,7 +817,7 @@ func (parser *TParser) statement() *TAst {
 	} else if parser.matchV("{") {
 		return parser.blockStmnt()
 	}
-	return parser.expression()
+	return parser.expressionStatment()
 }
 
 func (parser *TParser) structDecl() *TAst {
@@ -1201,6 +1049,7 @@ func (parser *TParser) varDecl() *TAst {
 		types = append(types, typeN)
 		valus = append(valus, value)
 	}
+	ended = parser.look.Position
 	parser.acceptV(";")
 	return AstVarDec(
 		AstVar,
@@ -1257,9 +1106,10 @@ func (parser *TParser) constDecl() *TAst {
 		types = append(types, typeN)
 		valus = append(valus, value)
 	}
+	ended = parser.look.Position
 	parser.acceptV(";")
 	return AstVarDec(
-		AstVar,
+		AstConst,
 		start.Merge(ended),
 		names,
 		types,
@@ -1313,6 +1163,7 @@ func (parser *TParser) localDecl() *TAst {
 		types = append(types, typeN)
 		valus = append(valus, value)
 	}
+	ended = parser.look.Position
 	parser.acceptV(";")
 	return AstVarDec(
 		AstLocal,
@@ -1528,6 +1379,202 @@ func (parser *TParser) blockStmnt() *TAst {
 		AstCodeBlock,
 		start.Merge(ended),
 		childrenN,
+	)
+}
+
+func (parser *TParser) tupleOrExpression() *TAst {
+	start := parser.look.Position
+	ended := start
+	lhs := parser.logical()
+	if lhs == nil {
+		return nil
+	}
+	if !parser.matchV(",") {
+		return lhs
+	}
+	items := make([]*TAst, 0)
+	items = append(items, lhs)
+	for parser.matchV(",") {
+		parser.acceptV(",")
+		ended = parser.look.Position
+		rhs := parser.simpleAssign()
+		if rhs == nil {
+			RaiseLanguageCompileError(
+				parser.Tokenizer.File,
+				parser.Tokenizer.Data,
+				"missing name after comma",
+				parser.look.Position,
+			)
+		}
+		items = append(items, rhs)
+	}
+	return AstSingleArray(
+		AstTupleExpression,
+		start.Merge(ended),
+		items,
+	)
+}
+
+func (parser *TParser) simpleAssign() *TAst {
+	lhs := parser.tupleOrExpression()
+	if lhs == nil {
+		return nil
+	}
+	for parser.matchV("=") || parser.matchV(":=") {
+		opt := parser.look.Value
+		parser.acceptT(TokenSYM)
+		rhs := parser.tupleOrExpression()
+		if rhs == nil {
+			RaiseLanguageCompileError(
+				parser.Tokenizer.File,
+				parser.Tokenizer.Data,
+				"missing right-hand expression",
+				lhs.Position,
+			)
+		}
+		lhs = AstBinary(
+			GetAstTypeByBinaryOp(opt),
+			lhs.Position.Merge(rhs.Position),
+			lhs,
+			rhs,
+			opt,
+		)
+	}
+	return lhs
+}
+
+func (parser *TParser) mulAssign() *TAst {
+	lhs := parser.simpleAssign()
+	if lhs == nil {
+		return nil
+	}
+	for parser.matchV("*=") || parser.matchV("/=") || parser.matchV("%=") {
+		opt := parser.look.Value
+		parser.acceptT(TokenSYM)
+		rhs := parser.simpleAssign()
+		if rhs == nil {
+			RaiseLanguageCompileError(
+				parser.Tokenizer.File,
+				parser.Tokenizer.Data,
+				"missing right-hand expression",
+				lhs.Position,
+			)
+		}
+		lhs = AstBinary(
+			GetAstTypeByBinaryOp(opt),
+			lhs.Position.Merge(rhs.Position),
+			lhs,
+			rhs,
+			opt,
+		)
+	}
+	return lhs
+}
+
+func (parser *TParser) addAssign() *TAst {
+	lhs := parser.mulAssign()
+	if lhs == nil {
+		return nil
+	}
+	for parser.matchV("+=") || parser.matchV("-=") {
+		opt := parser.look.Value
+		parser.acceptT(TokenSYM)
+		rhs := parser.mulAssign()
+		if rhs == nil {
+			RaiseLanguageCompileError(
+				parser.Tokenizer.File,
+				parser.Tokenizer.Data,
+				"missing right-hand expression",
+				lhs.Position,
+			)
+		}
+		lhs = AstBinary(
+			GetAstTypeByBinaryOp(opt),
+			lhs.Position.Merge(rhs.Position),
+			lhs,
+			rhs,
+			opt,
+		)
+	}
+	return lhs
+}
+
+func (parser *TParser) shiftAssign() *TAst {
+	lhs := parser.addAssign()
+	if lhs == nil {
+		return nil
+	}
+	for parser.matchV("<<=") || parser.matchV(">>=") {
+		opt := parser.look.Value
+		parser.acceptT(TokenSYM)
+		rhs := parser.addAssign()
+		if rhs == nil {
+			RaiseLanguageCompileError(
+				parser.Tokenizer.File,
+				parser.Tokenizer.Data,
+				"missing right-hand expression",
+				lhs.Position,
+			)
+		}
+		lhs = AstBinary(
+			GetAstTypeByBinaryOp(opt),
+			lhs.Position.Merge(rhs.Position),
+			lhs,
+			rhs,
+			opt,
+		)
+	}
+	return lhs
+}
+
+func (parser *TParser) bitAssign() *TAst {
+	lhs := parser.shiftAssign()
+	if lhs == nil {
+		return nil
+	}
+	for parser.matchV("&=") || parser.matchV("|=") || parser.matchV("^=") {
+		opt := parser.look.Value
+		parser.acceptT(TokenSYM)
+		rhs := parser.shiftAssign()
+		if rhs == nil {
+			RaiseLanguageCompileError(
+				parser.Tokenizer.File,
+				parser.Tokenizer.Data,
+				"missing right-hand expression",
+				lhs.Position,
+			)
+		}
+		lhs = AstBinary(
+			GetAstTypeByBinaryOp(opt),
+			lhs.Position.Merge(rhs.Position),
+			lhs,
+			rhs,
+			opt,
+		)
+	}
+	return lhs
+}
+
+func (parser *TParser) expressionStatment() *TAst {
+	start := parser.look.Position
+	ended := start
+	expr := parser.bitAssign()
+	if expr == nil {
+		if !parser.matchV(";") {
+			return nil
+		}
+		for parser.matchV(";") {
+			ended = parser.look.Position
+			parser.acceptV(";")
+		}
+		return CreateAst(AstEmptyStmnt, start.Merge(ended))
+	}
+	ended = parser.look.Position
+	parser.acceptV(";")
+	return AstSingle(
+		AstExpressionStmnt,
+		start.Merge(ended),
+		expr,
 	)
 }
 

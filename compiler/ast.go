@@ -3,81 +3,85 @@ package main
 type AstType int
 
 const (
-	AstIDN            AstType = iota
-	AstInt            AstType = iota
-	AstNum            AstType = iota
-	AstStr            AstType = iota
-	AstBool           AstType = iota
-	AstNull           AstType = iota
-	AstArray          AstType = iota
-	AstHashMap        AstType = iota
-	AstMember         AstType = iota
-	AstNullSafeMember AstType = iota
-	AstIndex          AstType = iota
-	AstCall           AstType = iota
-	AstPlus           AstType = iota
-	AstMinus          AstType = iota
-	AstNot            AstType = iota
-	AstBitNot         AstType = iota
-	AstPlus2          AstType = iota
-	AstMinus2         AstType = iota
-	AstAwait          AstType = iota
-	AstMul            AstType = iota
-	AstDiv            AstType = iota
-	AstMod            AstType = iota
-	AstAdd            AstType = iota
-	AstSub            AstType = iota
-	AstShl            AstType = iota
-	AstShr            AstType = iota
-	AstLt             AstType = iota
-	AstLe             AstType = iota
-	AstGt             AstType = iota
-	AstGe             AstType = iota
-	AstEq             AstType = iota
-	AstNe             AstType = iota
-	AstAnd            AstType = iota
-	AstOr             AstType = iota
-	AstXor            AstType = iota
-	AstAssign         AstType = iota
-	AstMulAssign      AstType = iota
-	AstDivAssign      AstType = iota
-	AstModAssign      AstType = iota
-	AstAddAssign      AstType = iota
-	AstSubAssign      AstType = iota
-	AstShlAssign      AstType = iota
-	AstShrAssign      AstType = iota
-	AstAndAssign      AstType = iota
-	AstOrAssign       AstType = iota
-	AstXorAssign      AstType = iota
-	AstTypePointer    AstType = iota
-	AstTypeInt8       AstType = iota // Typing
-	AstTypeInt16      AstType = iota // Typing
-	AstTypeInt32      AstType = iota // Typing
-	AstTypeInt64      AstType = iota // Typing
-	AstTypeNum        AstType = iota // Typing
-	AstTypeStr        AstType = iota // Typing
-	AstTypeBool       AstType = iota // Typing
-	AstTypeVoid       AstType = iota // Typing
-	AstTypeFunc       AstType = iota // Typing
-	AstTypeHashMap    AstType = iota // Typing
-	AstTypeArray      AstType = iota // Typing
-	AstStruct         AstType = iota
-	AstMethod         AstType = iota
-	AstDefine         AstType = iota
-	AstDo             AstType = iota
-	AstWhile          AstType = iota
-	AstImport         AstType = iota
-	AstVar            AstType = iota
-	AstLocal          AstType = iota
-	AstConst          AstType = iota
-	AstFor            AstType = iota
-	AstForIf          AstType = iota
-	AstIf             AstType = iota
-	AstContinueStmnt  AstType = iota
-	AstBreakStmnt     AstType = iota
-	AstReturnStmnt    AstType = iota
-	AstCodeBlock      AstType = iota
-	AstCodeProgram    AstType = iota
+	AstIDN             AstType = iota
+	AstInt             AstType = iota
+	AstNum             AstType = iota
+	AstStr             AstType = iota
+	AstBool            AstType = iota
+	AstNull            AstType = iota
+	AstArray           AstType = iota
+	AstHashMap         AstType = iota
+	AstMember          AstType = iota
+	AstNullSafeMember  AstType = iota
+	AstIndex           AstType = iota
+	AstCall            AstType = iota
+	AstPlus            AstType = iota
+	AstMinus           AstType = iota
+	AstNot             AstType = iota
+	AstBitNot          AstType = iota
+	AstPlus2           AstType = iota
+	AstMinus2          AstType = iota
+	AstAwait           AstType = iota
+	AstMul             AstType = iota
+	AstDiv             AstType = iota
+	AstMod             AstType = iota
+	AstAdd             AstType = iota
+	AstSub             AstType = iota
+	AstShl             AstType = iota
+	AstShr             AstType = iota
+	AstLt              AstType = iota
+	AstLe              AstType = iota
+	AstGt              AstType = iota
+	AstGe              AstType = iota
+	AstEq              AstType = iota
+	AstNe              AstType = iota
+	AstAnd             AstType = iota
+	AstOr              AstType = iota
+	AstXor             AstType = iota
+	AstAssign          AstType = iota
+	AstBindAssign      AstType = iota
+	AstMulAssign       AstType = iota
+	AstDivAssign       AstType = iota
+	AstModAssign       AstType = iota
+	AstAddAssign       AstType = iota
+	AstSubAssign       AstType = iota
+	AstShlAssign       AstType = iota
+	AstShrAssign       AstType = iota
+	AstAndAssign       AstType = iota
+	AstOrAssign        AstType = iota
+	AstXorAssign       AstType = iota
+	AstTupleExpression AstType = iota
+	AstTypePointer     AstType = iota
+	AstTypeInt8        AstType = iota // Typing
+	AstTypeInt16       AstType = iota // Typing
+	AstTypeInt32       AstType = iota // Typing
+	AstTypeInt64       AstType = iota // Typing
+	AstTypeNum         AstType = iota // Typing
+	AstTypeStr         AstType = iota // Typing
+	AstTypeBool        AstType = iota // Typing
+	AstTypeVoid        AstType = iota // Typing
+	AstTypeFunc        AstType = iota // Typing
+	AstTypeHashMap     AstType = iota // Typing
+	AstTypeArray       AstType = iota // Typing
+	AstStruct          AstType = iota
+	AstMethod          AstType = iota
+	AstDefine          AstType = iota
+	AstDo              AstType = iota
+	AstWhile           AstType = iota
+	AstImport          AstType = iota
+	AstVar             AstType = iota
+	AstLocal           AstType = iota
+	AstConst           AstType = iota
+	AstFor             AstType = iota
+	AstForIf           AstType = iota
+	AstIf              AstType = iota
+	AstContinueStmnt   AstType = iota
+	AstBreakStmnt      AstType = iota
+	AstReturnStmnt     AstType = iota
+	AstCodeBlock       AstType = iota
+	AstEmptyStmnt      AstType = iota
+	AstExpressionStmnt AstType = iota
+	AstCodeProgram     AstType = iota
 )
 
 type TAst struct {
@@ -221,6 +225,10 @@ func AstBlock(ttype AstType, position TPosition, children []*TAst) *TAst {
 	return ast
 }
 
+func IsConstantValueNode(node *TAst) bool {
+	return node.Ttype == AstInt || node.Ttype == AstNum || node.Ttype == AstStr || node.Ttype == AstBool
+}
+
 func GetAstTypeByPostfixOp(opt string) AstType {
 	switch opt {
 	case "++":
@@ -287,6 +295,10 @@ func GetAstTypeByBinaryOp(opt string) AstType {
 		return AstAnd
 	case "||":
 		return AstOr
+	case "=":
+		return AstAssign
+	case ":=":
+		return AstBindAssign
 	case "*=":
 		return AstMulAssign
 	case "/=":
