@@ -236,11 +236,45 @@ func (analyzer *TAnalyzer) expression(node *TAst) {
 			types.TTuple(tupleTypes),
 			nil,
 		))
+	case AstBindAssign:
+		if analyzer.scope.InGlobal() {
+			RaiseLanguageCompileError(
+				analyzer.file.Path,
+				analyzer.file.Data,
+				"short variable declaration is not allowed in global scope",
+				node.Position,
+			)
+		}
+
+		for index, variableNode := range node.AstArr0 {
+			if variableNode.Ttype != AstIDN {
+				RaiseLanguageCompileError(
+					analyzer.file.Path,
+					analyzer.file.Data,
+					"invalid variable name, variable name must be in a form of identifier",
+					variableNode.Position,
+				)
+			}
+			if analyzer.file.Env.HasLocalSymbol(variableNode.Str0) {
+				RaiseLanguageCompileError(
+					analyzer.file.Path,
+					analyzer.file.Data,
+					"duplicate variable name",
+					variableNode.Position,
+				)
+			}
+			analyzer.write(variableNode.Str0, false)
+			if index < len(node.AstArr0)-1 {
+				analyzer.write(",", false)
+			}
+		}
+		analyzer.write(":=", false)
+		analyzer.expression(node.Ast1)
 	default:
 		RaiseLanguageCompileError(
 			analyzer.file.Path,
 			analyzer.file.Data,
-			"not implemented expression",
+			fmt.Sprintf("not implemented expression: %d", node.Ttype),
 			node.Position,
 		)
 	}

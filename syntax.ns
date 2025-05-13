@@ -16,7 +16,7 @@ struct King {
 
 define (p Person) GetPet() Dog {
     2;
-    a, b, c := add();
+    a, b, c := 100;
 }
 
 const Kill str = "adadaasdas";
