@@ -24,5 +24,4 @@ const Kill str = "adadaasdas";
 
 define main(args [str]) i32 {
     const g i32 = 102;
-   
 }

@@ -2,6 +2,7 @@ package main
 
 import (
 	"dev/types"
+	"fmt"
 	"os"
 	"strings"
 )
@@ -25,12 +26,25 @@ type TMissingTypeJob struct {
 	TypeAst *TAst
 }
 
+type TDelayedDefine struct {
+	SrcFile TFileJob
+	Node    *TAst
+}
+
+type TImportLater struct {
+	Src TFileJob // The file that we need to import
+	Dst TFileJob // The file that we are importing to
+	Ast *TAst
+}
+
 type TForward struct {
-	State        *TState
-	Files        []TFileJob
-	Imports      []TFileJob
-	Delayed      []TDelayedImport
-	MissingTypes []TMissingTypeJob
+	State          *TState
+	Files          []TFileJob
+	Imports        []TFileJob
+	Delayed        []TDelayedImport
+	MissingTypes   []TMissingTypeJob
+	DelayedDefines []TDelayedDefine
+	ImportLater    []TImportLater
 }
 
 // FILE
@@ -113,6 +127,46 @@ func (f *TForward) popMissingTypes() TMissingTypeJob {
 func (f *TForward) pushMissingTypes(missingType TMissingTypeJob) {
 	f.MissingTypes = append(f.MissingTypes, missingType)
 }
+
+// DELAYED DEFINES
+
+func (f *TForward) hasDelayedDefines() bool {
+	return len(f.DelayedDefines) > 0
+}
+
+func (f *TForward) popDelayedDefines() TDelayedDefine {
+	if !f.hasDelayedDefines() {
+		panic("no delayed define to pop")
+	}
+	delayedDefine := f.DelayedDefines[len(f.DelayedDefines)-1]
+	f.DelayedDefines = f.DelayedDefines[:len(f.DelayedDefines)-1]
+	return delayedDefine
+}
+
+func (f *TForward) pushDelayedDefine(delayedDefine TDelayedDefine) {
+	f.DelayedDefines = append(f.DelayedDefines, delayedDefine)
+}
+
+// IMPORT LATER
+
+func (f *TForward) hasImportLater() bool {
+	return len(f.ImportLater) > 0
+}
+
+func (f *TForward) popImportLater() TImportLater {
+	if !f.hasImportLater() {
+		panic("no import later to pop")
+	}
+	importLater := f.ImportLater[len(f.ImportLater)-1]
+	f.ImportLater = f.ImportLater[:len(f.ImportLater)-1]
+	return importLater
+}
+
+func (f *TForward) pushImportLater(importLater TImportLater) {
+	f.ImportLater = append(f.ImportLater, importLater)
+}
+
+// Begin: Forward
 
 func (f *TForward) getType(fileJob TFileJob, node *TAst) *types.TTyping {
 	switch node.Ttype {
@@ -263,6 +317,83 @@ func (f *TForward) forwardStruct(fileJob TFileJob, node *TAst) {
 	})
 }
 
+func (f *TForward) forwardDefine(fileJob TFileJob, node *TAst, error bool) {
+	nameNode := node.Ast0
+	returnTypeNode := node.Ast1
+	paramNamesNode := node.AstArr0
+	paramTypesNode := node.AstArr1
+	if nameNode.Ttype != AstIDN {
+		RaiseLanguageCompileError(
+			fileJob.Path,
+			fileJob.Data,
+			"invalid function name, function name must be in a form of identifier",
+			nameNode.Position,
+		)
+	}
+	if fileJob.Env.HasLocalSymbol(nameNode.Str0) {
+		RaiseLanguageCompileError(
+			fileJob.Path,
+			fileJob.Data,
+			"duplicate function name",
+			nameNode.Position,
+		)
+	}
+	parameters := make([]*types.TPair, 0)
+	for index, nameNode := range paramNamesNode {
+		paramTypeNode := paramTypesNode[index]
+		if nameNode.Ttype != AstIDN {
+			RaiseLanguageCompileError(
+				fileJob.Path,
+				fileJob.Data,
+				"invalid parameter name, parameter name must be in a form of identifier",
+				nameNode.Position,
+			)
+		}
+		paramType := f.getType(fileJob, paramTypeNode)
+		if paramType == nil {
+			if error {
+				RaiseLanguageCompileError(
+					fileJob.Path,
+					fileJob.Data,
+					"missing type, or type is invalid",
+					paramTypeNode.Position,
+				)
+			}
+			f.pushDelayedDefine(TDelayedDefine{
+				SrcFile: fileJob,
+				Node:    node,
+			})
+			return
+		}
+		parameters = append(parameters, types.CreatePair(nameNode.Str0, paramType))
+	}
+	returnType := f.getType(fileJob, returnTypeNode)
+	if returnType == nil {
+		if error {
+			RaiseLanguageCompileError(
+				fileJob.Path,
+				fileJob.Data,
+				"missing type, or type is invalid",
+				returnTypeNode.Position,
+			)
+		}
+		f.pushDelayedDefine(TDelayedDefine{
+			SrcFile: fileJob,
+			Node:    node,
+		})
+		return
+	}
+	fileJob.Env.AddSymbol(TSymbol{
+		Name:         nameNode.Str0,
+		NameSpace:    JoinVariableName(GetFileNameWithoutExtension(fileJob.Path), nameNode.Str0),
+		DataType:     types.TFunc(parameters, returnType),
+		Position:     node.Position,
+		IsGlobal:     true,
+		IsConst:      true,
+		IsInitialize: true,
+	})
+}
+
 func (f *TForward) forwardImport(fileJob TFileJob, node *TAst) {
 	pathNode := node.Ast0
 	namesNode := node.AstArr0
@@ -339,8 +470,11 @@ func (f *TForward) forwardImport(fileJob TFileJob, node *TAst) {
 			)
 		}
 		if !childFile.Env.HasLocalSymbol(nameNode.Str0) {
-			// If symbol not found, skip it.
-			// let analyzer handle it.
+			f.pushImportLater(TImportLater{
+				Src: childFile,
+				Dst: fileJob,
+				Ast: nameNode,
+			})
 			continue
 		}
 		if fileJob.Env.HasGlobalSymbol(nameNode.Str0) {
@@ -363,6 +497,96 @@ func (f *TForward) forwardImport(fileJob TFileJob, node *TAst) {
 	}
 }
 
+func (f *TForward) forwardVar(fileJob TFileJob, node *TAst) {
+	namesNode := node.AstArr0
+	typesNode := node.AstArr1
+	valuNode := node.AstArr2
+
+	for index, nameNode := range namesNode {
+		typeNode := typesNode[index]
+		valuNode := valuNode[index]
+		if nameNode.Ttype != AstIDN {
+			RaiseLanguageCompileError(
+				fileJob.Path,
+				fileJob.Data,
+				"invalid variable name, variable name must be in a form of identifier",
+				nameNode.Position,
+			)
+		}
+		dataType := f.getType(fileJob, typeNode)
+		if dataType == nil {
+			f.pushMissingTypes(TMissingTypeJob{
+				file:    fileJob,
+				NameAst: nameNode,
+				TypeAst: typeNode,
+			})
+			continue
+		}
+		if fileJob.Env.HasLocalSymbol(nameNode.Str0) {
+			RaiseLanguageCompileError(
+				fileJob.Path,
+				fileJob.Data,
+				"duplicate variable name",
+				nameNode.Position,
+			)
+		}
+		fileJob.Env.AddSymbol(TSymbol{
+			Name:         nameNode.Str0,
+			NameSpace:    JoinVariableName(GetFileNameWithoutExtension(fileJob.Path), nameNode.Str0),
+			DataType:     dataType,
+			Position:     nameNode.Position,
+			IsGlobal:     true,
+			IsConst:      false,
+			IsInitialize: valuNode != nil,
+		})
+	}
+}
+
+func (f *TForward) forwardConst(fileJob TFileJob, node *TAst) {
+	namesNode := node.AstArr0
+	typesNode := node.AstArr1
+	valuNode := node.AstArr2
+
+	for index, nameNode := range namesNode {
+		typeNode := typesNode[index]
+		valuNode := valuNode[index]
+		if nameNode.Ttype != AstIDN {
+			RaiseLanguageCompileError(
+				fileJob.Path,
+				fileJob.Data,
+				"invalid variable name, variable name must be in a form of identifier",
+				nameNode.Position,
+			)
+		}
+		dataType := f.getType(fileJob, typeNode)
+		if dataType == nil {
+			f.pushMissingTypes(TMissingTypeJob{
+				file:    fileJob,
+				NameAst: nameNode,
+				TypeAst: typeNode,
+			})
+			continue
+		}
+		if fileJob.Env.HasLocalSymbol(nameNode.Str0) {
+			RaiseLanguageCompileError(
+				fileJob.Path,
+				fileJob.Data,
+				"duplicate variable name",
+				nameNode.Position,
+			)
+		}
+		fileJob.Env.AddSymbol(TSymbol{
+			Name:         nameNode.Str0,
+			NameSpace:    JoinVariableName(GetFileNameWithoutExtension(fileJob.Path), nameNode.Str0),
+			DataType:     dataType,
+			Position:     nameNode.Position,
+			IsGlobal:     true,
+			IsConst:      false,
+			IsInitialize: valuNode != nil,
+		})
+	}
+}
+
 func (f *TForward) forward(fileJob TFileJob) {
 	body := fileJob.Ast.AstArr0
 	for i := range body {
@@ -370,8 +594,14 @@ func (f *TForward) forward(fileJob TFileJob) {
 		switch child.Ttype {
 		case AstStruct:
 			f.forwardStruct(fileJob, child)
+		case AstDefine:
+			f.forwardDefine(fileJob, child, false)
 		case AstImport:
 			f.forwardImport(fileJob, child)
+		case AstVar:
+			f.forwardVar(fileJob, child)
+		case AstConst:
+			f.forwardConst(fileJob, child)
 		}
 	}
 }
@@ -402,6 +632,37 @@ func (f *TForward) build() {
 				missingType.TypeAst.Position,
 			)
 		}
+	}
+
+	// Delayed defines resolution
+	for f.hasDelayedDefines() {
+		delayedDefine := f.popDelayedDefines()
+		f.forwardDefine(delayedDefine.SrcFile, delayedDefine.Node, true)
+	}
+
+	// Import later resolution
+	for f.hasImportLater() {
+		importLater := f.popImportLater()
+		src := importLater.Src
+		dst := importLater.Dst
+		ast := importLater.Ast
+		if !src.Env.HasLocalSymbol(ast.Str0) {
+			RaiseLanguageCompileError(
+				dst.Path,
+				dst.Data,
+				fmt.Sprintf("symbol %s not found in import %s", ast.Str0, src.Path),
+				ast.Position,
+			)
+		}
+		if dst.Env.HasLocalSymbol(ast.Str0) {
+			RaiseLanguageCompileError(
+				dst.Path,
+				dst.Data,
+				fmt.Sprintf("symbol %s already exists in import %s", ast.Str0, dst.Path),
+				ast.Position,
+			)
+		}
+		dst.Env.AddSymbol(src.Env.GetSymbol(ast.Str0))
 	}
 }
 

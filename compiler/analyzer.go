@@ -523,18 +523,36 @@ func (analyzer *TAnalyzer) visitDefine(node *TAst) {
 	}
 	analyzer.write("func", false)
 	analyzer.srcSp()
+	var thisArgType *types.TTyping = nil
 	if isMethod {
 		analyzer.write("(", false)
 		thisArgNode := paramNamesNode[0]
 		thisArgTypeNode := paramTypesNode[0]
-		analyzer.write(fmt.Sprintf("%s %s", thisArgNode.Str0, analyzer.getType(thisArgTypeNode).ToGoType()), false)
+		thisArgType = analyzer.getType(thisArgTypeNode)
+		analyzer.write(fmt.Sprintf("%s %s", thisArgNode.Str0, thisArgType.ToGoType()), false)
 		analyzer.write(")", false)
 		analyzer.srcSp()
 		paramNamesNode = paramNamesNode[1:]
 		paramTypesNode = paramTypesNode[1:]
+		if analyzer.scope.Env.HasLocalSymbol(thisArgNode.Str0) {
+			RaiseLanguageCompileError(
+				analyzer.file.Path,
+				analyzer.file.Data,
+				"duplicate symbol name",
+				thisArgNode.Position,
+			)
+		}
+		analyzer.scope.Env.AddSymbol(TSymbol{
+			Name:      thisArgNode.Str0,
+			NameSpace: thisArgNode.Str0,
+			DataType:  analyzer.getType(thisArgTypeNode),
+			Position:  thisArgNode.Position,
+			IsGlobal:  analyzer.scope.InGlobal(),
+		})
 	}
 	analyzer.write(JoinVariableName(GetFileNameWithoutExtension(analyzer.file.Path), nameNode.Str0), false)
 	analyzer.write("(", false)
+	parametersTypesPair := make([]*types.TPair, 0)
 	for index, paramNameNode := range paramNamesNode {
 		paramTypeNode := paramTypesNode[index]
 		if paramNameNode.Ttype != AstIDN {
@@ -554,10 +572,29 @@ func (analyzer *TAnalyzer) visitDefine(node *TAst) {
 				paramNameNode.Position,
 			)
 		}
-		analyzer.write(fmt.Sprintf("%s %s", paramNameNode.Str0, analyzer.getType(paramTypeNode).ToGoType()), false)
+		parameterType := analyzer.getType(paramTypeNode)
+		parametersTypesPair = append(parametersTypesPair, types.CreatePair(paramNameNode.Str0, parameterType))
+		analyzer.write(fmt.Sprintf("%s %s", paramNameNode.Str0, parameterType.ToGoType()), false)
 		if index < len(paramNamesNode)-1 {
 			analyzer.srcNl()
 		}
+		if analyzer.scope.Env.HasLocalSymbol(paramNameNode.Str0) {
+			RaiseLanguageCompileError(
+				analyzer.file.Path,
+				analyzer.file.Data,
+				"duplicate symbol name",
+				paramNameNode.Position,
+			)
+		}
+		analyzer.scope.Env.AddSymbol(TSymbol{
+			Name:         paramNameNode.Str0,
+			NameSpace:    paramNameNode.Str0,
+			DataType:     analyzer.getType(paramTypeNode),
+			Position:     paramNameNode.Position,
+			IsGlobal:     analyzer.scope.InGlobal(),
+			IsConst:      false,
+			IsInitialize: true, // For parameters, we always initialize them.
+		})
 	}
 	analyzer.write(")", false)
 	returnType := analyzer.getType(returnTypeNode)
@@ -577,6 +614,23 @@ func (analyzer *TAnalyzer) visitDefine(node *TAst) {
 	analyzer.write("}", false)
 	analyzer.scope = analyzer.scope.Parent
 	analyzer.scope = analyzer.scope.Parent
+	if isMethod && thisArgType != nil {
+		// Save to type
+		if thisArgType.HasMethod(nameNode.Str0) {
+			RaiseLanguageCompileError(
+				analyzer.file.Path,
+				analyzer.file.Data,
+				"method already exists",
+				nameNode.Position,
+			)
+		}
+		thisArgType.AddMethod(nameNode.Str0,
+			types.TFunc(
+				parametersTypesPair,
+				returnType,
+			),
+		)
+	}
 }
 
 // Imports are already handled by Forwarder
@@ -629,7 +683,6 @@ func (analyzer *TAnalyzer) visitImport(node *TAst) {
 			pathNode.Position,
 		)
 	}
-	importedFile := analyzer.state.GetFile(actualPath)
 	for index, nameNode := range namesNode {
 		if nameNode.Ttype != AstIDN {
 			RaiseLanguageCompileError(
@@ -638,26 +691,6 @@ func (analyzer *TAnalyzer) visitImport(node *TAst) {
 				"invalid import name, import name must be in a form of identifier",
 				nameNode.Position,
 			)
-		}
-		if !importedFile.Env.HasLocalSymbol(nameNode.Str0) {
-			RaiseLanguageCompileError(
-				analyzer.file.Path,
-				analyzer.file.Data,
-				"imported symbol not found",
-				nameNode.Position,
-			)
-		}
-		importedSymbol := importedFile.Env.GetSymbol(nameNode.Str0)
-		if !types.IsStruct(importedSymbol.DataType) {
-			if analyzer.file.Env.HasGlobalSymbol(nameNode.Str0) {
-				RaiseLanguageCompileError(
-					analyzer.file.Path,
-					analyzer.file.Data,
-					"duplicate symbol name",
-					nameNode.Position,
-				)
-			}
-			analyzer.file.Env.AddSymbol(importedSymbol)
 		}
 		analyzer.write(fmt.Sprintf("/* import %s -> %s */", analyzer.file.Path, nameNode.Str0), false)
 		if index < len(namesNode)-1 {
@@ -716,6 +749,10 @@ func (analyzer *TAnalyzer) visitVar(node *TAst) {
 			)
 		}
 		analyzer.srcTb()
+		// For "var" (global), var fileName_a int = 100;
+		// For "const" (global), const fileName_a int = 100;
+		// For "const" (local), var a int = 100;
+		// For "local" (local), var a int = 100;
 		analyzer.write(fmt.Sprintf("%s %s", JoinVariableName(GetFileNameWithoutExtension(analyzer.file.Path), nameNode.Str0), dataType.ToGoType()), false)
 		if valuNode != nil {
 			analyzer.write(" = ", false)
@@ -736,6 +773,29 @@ func (analyzer *TAnalyzer) visitVar(node *TAst) {
 		if index < len(namesNode)-1 {
 			analyzer.srcNl()
 		}
+		if analyzer.scope.InLocal() {
+			// Check if the symbol already exists in the local scope.
+			// If it doesn't exist in the local scope, we save it to the environment;
+			// otherwise, we raise an error.
+			if analyzer.scope.Env.HasLocalSymbol(nameNode.Str0) {
+				RaiseLanguageCompileError(
+					analyzer.file.Path,
+					analyzer.file.Data,
+					"duplicate symbol name",
+					nameNode.Position,
+				)
+			}
+			analyzer.scope.Env.AddSymbol(TSymbol{
+				Name:         nameNode.Str0,
+				NameSpace:    JoinVariableName(GetFileNameWithoutExtension(analyzer.file.Path), nameNode.Str0),
+				DataType:     dataType,
+				Position:     nameNode.Position,
+				IsGlobal:     analyzer.scope.InGlobal(),
+				IsConst:      false,
+				IsInitialize: valuNode != nil,
+			})
+		}
+
 	}
 	analyzer.decTb()
 	analyzer.srcNl()
@@ -804,7 +864,15 @@ func (analyzer *TAnalyzer) visitConst(node *TAst) {
 			)
 		}
 		analyzer.srcTb()
-		analyzer.write(fmt.Sprintf("%s %s", JoinVariableName(GetFileNameWithoutExtension(analyzer.file.Path), nameNode.Str0), dataType.ToGoType()), false)
+		// For "var" (global), var fileName_a int = 100;
+		// For "const" (global), const fileName_a int = 100;
+		// For "const" (local), var a int = 100;
+		// For "local" (local), var a int = 100;
+		if analyzer.scope.InGlobal() {
+			analyzer.write(fmt.Sprintf("%s %s", JoinVariableName(GetFileNameWithoutExtension(analyzer.file.Path), nameNode.Str0), dataType.ToGoType()), false)
+		} else {
+			analyzer.write(fmt.Sprintf("%s %s", nameNode.Str0, dataType.ToGoType()), false)
+		}
 		if analyzer.scope.InGlobal() && valuNode != nil && !IsConstantValueNode(valuNode) {
 			RaiseLanguageCompileError(
 				analyzer.file.Path,
@@ -832,15 +900,28 @@ func (analyzer *TAnalyzer) visitConst(node *TAst) {
 		if index < len(namesNode)-1 {
 			analyzer.srcNl()
 		}
-		analyzer.scope.Env.AddSymbol(TSymbol{
-			Name:         nameNode.Str0,
-			NameSpace:    nameNode.Str0,
-			DataType:     dataType,
-			Position:     nameNode.Position,
-			IsGlobal:     analyzer.scope.InGlobal(),
-			IsConst:      true,
-			IsInitialize: valuNode != nil,
-		})
+		if analyzer.scope.InLocal() {
+			// Check if the symbol already exists in the local scope.
+			// If it doesn't exist in the local scope, we save it to the environment;
+			// otherwise, we raise an error.
+			if analyzer.scope.Env.HasLocalSymbol(nameNode.Str0) {
+				RaiseLanguageCompileError(
+					analyzer.file.Path,
+					analyzer.file.Data,
+					"duplicate symbol name",
+					nameNode.Position,
+				)
+			}
+			analyzer.scope.Env.AddSymbol(TSymbol{
+				Name:         nameNode.Str0,
+				NameSpace:    nameNode.Str0,
+				DataType:     dataType,
+				Position:     nameNode.Position,
+				IsGlobal:     analyzer.scope.InGlobal(),
+				IsConst:      true,
+				IsInitialize: valuNode != nil,
+			})
+		}
 	}
 	analyzer.decTb()
 	analyzer.srcNl()
@@ -899,7 +980,11 @@ func (analyzer *TAnalyzer) visitLocal(node *TAst) {
 			)
 		}
 		analyzer.srcTb()
-		analyzer.write(fmt.Sprintf("%s %s", JoinVariableName(GetFileNameWithoutExtension(analyzer.file.Path), nameNode.Str0), dataType.ToGoType()), false)
+		// For "var" (global), var fileName_a int = 100;
+		// For "const" (global), const fileName_a int = 100;
+		// For "const" (local), var a int = 100;
+		// For "local" (local), var a int = 100;
+		analyzer.write(fmt.Sprintf("%s %s", nameNode.Str0, dataType.ToGoType()), false)
 		if valuNode != nil {
 			analyzer.write(" = ", false)
 			analyzer.expression(valuNode)
@@ -919,23 +1004,28 @@ func (analyzer *TAnalyzer) visitLocal(node *TAst) {
 		if index < len(namesNode)-1 {
 			analyzer.srcNl()
 		}
-		if analyzer.scope.Env.HasLocalSymbol(nameNode.Str0) {
-			RaiseLanguageCompileError(
-				analyzer.file.Path,
-				analyzer.file.Data,
-				"duplicate symbol name",
-				nameNode.Position,
-			)
+		if analyzer.scope.InLocal() {
+			// Check if the symbol already exists in the local scope.
+			// If it doesn't exist in the local scope, we save it to the environment;
+			// otherwise, we raise an error.
+			if analyzer.scope.Env.HasLocalSymbol(nameNode.Str0) {
+				RaiseLanguageCompileError(
+					analyzer.file.Path,
+					analyzer.file.Data,
+					"duplicate symbol name",
+					nameNode.Position,
+				)
+			}
+			analyzer.scope.Env.AddSymbol(TSymbol{
+				Name:         nameNode.Str0,
+				NameSpace:    nameNode.Str0,
+				DataType:     dataType,
+				Position:     nameNode.Position,
+				IsGlobal:     false,
+				IsConst:      false,
+				IsInitialize: valuNode != nil,
+			})
 		}
-		analyzer.scope.Env.AddSymbol(TSymbol{
-			Name:         nameNode.Str0,
-			NameSpace:    nameNode.Str0,
-			DataType:     dataType,
-			Position:     nameNode.Position,
-			IsGlobal:     false,
-			IsConst:      false,
-			IsInitialize: valuNode != nil,
-		})
 	}
 	analyzer.decTb()
 	analyzer.srcNl()
