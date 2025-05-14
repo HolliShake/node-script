@@ -97,7 +97,12 @@ func (tokenizer *TTokenizer) getIdn() TToken {
 		tokenizer.colm,
 	)
 	if !tokenizer.isIdn() {
-		RaiseSystemError(fmt.Sprintf("invalid identifier start %s", string(tokenizer.look)))
+		RaiseLanguageCompileError(
+			tokenizer.File,
+			tokenizer.Data,
+			fmt.Sprintf("invalid identifier start %s", string(tokenizer.look)),
+			position,
+		)
 	}
 	for !tokenizer.IsEof() && (tokenizer.isIdn() || (tokenizer.isNum() && len(value) > 0)) {
 		value += string(tokenizer.look)
@@ -121,7 +126,12 @@ func (tokenizer *TTokenizer) getNum() TToken {
 		tokenizer.colm,
 	)
 	if !tokenizer.isNum() {
-		RaiseSystemError(fmt.Sprintf("invalid number start %s", string(tokenizer.look)))
+		RaiseLanguageCompileError(
+			tokenizer.File,
+			tokenizer.Data,
+			fmt.Sprintf("invalid number start %s", string(tokenizer.look)),
+			position,
+		)
 	}
 	for !tokenizer.IsEof() && tokenizer.isNum() {
 		value += string(tokenizer.look)
@@ -133,7 +143,12 @@ func (tokenizer *TTokenizer) getNum() TToken {
 			value += string(tokenizer.look)
 			tokenizer.forward()
 			if !tokenizer.isHex() {
-				RaiseSystemError(fmt.Sprintf("invalid hex number %s", value))
+				RaiseLanguageCompileError(
+					tokenizer.File,
+					tokenizer.Data,
+					fmt.Sprintf("invalid hex number %s", value),
+					position,
+				)
 			}
 			for !tokenizer.IsEof() && tokenizer.isHex() {
 				value += string(tokenizer.look)
@@ -143,7 +158,12 @@ func (tokenizer *TTokenizer) getNum() TToken {
 			value += string(tokenizer.look)
 			tokenizer.forward()
 			if !tokenizer.isOct() {
-				RaiseSystemError(fmt.Sprintf("invalid oct number %s", value))
+				RaiseLanguageCompileError(
+					tokenizer.File,
+					tokenizer.Data,
+					fmt.Sprintf("invalid oct number %s", value),
+					position,
+				)
 			}
 			for !tokenizer.IsEof() && tokenizer.isOct() {
 				value += string(tokenizer.look)
@@ -153,7 +173,12 @@ func (tokenizer *TTokenizer) getNum() TToken {
 			value += string(tokenizer.look)
 			tokenizer.forward()
 			if !tokenizer.isBin() {
-				RaiseSystemError(fmt.Sprintf("invalid bin number %s", value))
+				RaiseLanguageCompileError(
+					tokenizer.File,
+					tokenizer.Data,
+					fmt.Sprintf("invalid bin number %s", value),
+					position,
+				)
 			}
 			for !tokenizer.IsEof() && tokenizer.isBin() {
 				value += string(tokenizer.look)
@@ -176,7 +201,12 @@ func (tokenizer *TTokenizer) getNum() TToken {
 		value += string(tokenizer.look)
 		tokenizer.forward()
 		if !tokenizer.isNum() {
-			RaiseSystemError(fmt.Sprintf("invalid number %s", value))
+			RaiseLanguageCompileError(
+				tokenizer.File,
+				tokenizer.Data,
+				fmt.Sprintf("invalid number %s", value),
+				position,
+			)
 		}
 		for !tokenizer.IsEof() && tokenizer.isNum() {
 			value += string(tokenizer.look)
@@ -193,7 +223,12 @@ func (tokenizer *TTokenizer) getNum() TToken {
 			tokenizer.forward()
 		}
 		if !tokenizer.isNum() {
-			RaiseSystemError(fmt.Sprintf("invalid number %s", value))
+			RaiseLanguageCompileError(
+				tokenizer.File,
+				tokenizer.Data,
+				fmt.Sprintf("invalid number %s", value),
+				position,
+			)
 		}
 		for !tokenizer.IsEof() && tokenizer.isNum() {
 			value += string(tokenizer.look)
@@ -214,7 +249,12 @@ func (tokenizer *TTokenizer) getStr() TToken {
 		tokenizer.colm,
 	)
 	if !tokenizer.isStr() {
-		RaiseSystemError(fmt.Sprintf("invalid string start %s", string(tokenizer.look)))
+		RaiseLanguageCompileError(
+			tokenizer.File,
+			tokenizer.Data,
+			fmt.Sprintf("invalid string start \"%s\"", string(tokenizer.look)),
+			position,
+		)
 	}
 	op := tokenizer.isStr()
 	cl := false
@@ -252,7 +292,12 @@ func (tokenizer *TTokenizer) getStr() TToken {
 		cl = tokenizer.isStr()
 	}
 	if !(op && cl) {
-		RaiseSystemError(fmt.Sprintf("string not properly closed %s", value))
+		RaiseLanguageCompileError(
+			tokenizer.File,
+			tokenizer.Data,
+			fmt.Sprintf("string not properly closed \"%s\"", value),
+			position,
+		)
 	}
 	tokenizer.forward()
 	return TToken{
@@ -398,7 +443,12 @@ func (tokenizer *TTokenizer) getSym() TToken {
 			tokenizer.forward()
 		}
 	default:
-		RaiseSystemError(fmt.Sprintf("invalid symbol %s", string(tokenizer.look)))
+		RaiseLanguageCompileError(
+			tokenizer.File,
+			tokenizer.Data,
+			fmt.Sprintf("invalid symbol %s", string(tokenizer.look)),
+			position,
+		)
 	}
 	return TToken{
 		Type:     TokenSYM,

@@ -16,11 +16,13 @@ struct King {
 
 define (p Person) GetPet() Dog {
     2;
-    a, b, c := 100;
+    a, b, c := 100, 200, "Hola!";
+    d := 100;
 }
 
 const Kill str = "adadaasdas";
 
 define main(args [str]) i32 {
     const g i32 = 102;
+   
 }

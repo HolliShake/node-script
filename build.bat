@@ -1,2 +1,2 @@
 @echo off
-go build -o alphajs.exe compiler
+go build -o compiler.exe compiler

@@ -1397,7 +1397,7 @@ func (parser *TParser) tupleOrExpression() *TAst {
 	for parser.matchV(",") {
 		parser.acceptV(",")
 		ended = parser.look.Position
-		rhs := parser.simpleAssign()
+		rhs := parser.logical()
 		if rhs == nil {
 			RaiseLanguageCompileError(
 				parser.Tokenizer.File,

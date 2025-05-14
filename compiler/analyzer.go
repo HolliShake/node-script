@@ -229,7 +229,7 @@ func (analyzer *TAnalyzer) expression(node *TAst) {
 			dataType := analyzer.stack.Pop().DataType
 			tupleTypes = append(tupleTypes, dataType)
 			if index < len(node.AstArr0)-1 {
-				analyzer.write(",", false)
+				analyzer.write(", ", false)
 			}
 		}
 		analyzer.stack.Push(CreateValue(
@@ -237,7 +237,7 @@ func (analyzer *TAnalyzer) expression(node *TAst) {
 			nil,
 		))
 	case AstBindAssign:
-		if analyzer.scope.InGlobal() {
+		if analyzer.scope.InGlobal() || analyzer.scope.InSingle() {
 			RaiseLanguageCompileError(
 				analyzer.file.Path,
 				analyzer.file.Data,
@@ -245,31 +245,96 @@ func (analyzer *TAnalyzer) expression(node *TAst) {
 				node.Position,
 			)
 		}
-
-		for index, variableNode := range node.AstArr0 {
-			if variableNode.Ttype != AstIDN {
-				RaiseLanguageCompileError(
-					analyzer.file.Path,
-					analyzer.file.Data,
-					"invalid variable name, variable name must be in a form of identifier",
-					variableNode.Position,
-				)
-			}
-			if analyzer.file.Env.HasLocalSymbol(variableNode.Str0) {
+		if node.Ast0.Ttype != AstIDN && node.Ast0.Ttype != AstTupleExpression {
+			RaiseLanguageCompileError(
+				analyzer.file.Path,
+				analyzer.file.Data,
+				"invalid variable name, variable name must be in a form of identifier",
+				node.Ast0.Position,
+			)
+		}
+		if node.Ast0.Ttype == AstIDN {
+			if analyzer.file.Env.HasLocalSymbol(node.Ast0.Str0) {
 				RaiseLanguageCompileError(
 					analyzer.file.Path,
 					analyzer.file.Data,
 					"duplicate variable name",
-					variableNode.Position,
+					node.Ast0.Position,
 				)
 			}
-			analyzer.write(variableNode.Str0, false)
-			if index < len(node.AstArr0)-1 {
-				analyzer.write(",", false)
+			analyzer.write(node.Ast0.Str0, false)
+		} else {
+			for index, variableNode := range node.Ast0.AstArr0 {
+				if variableNode.Ttype != AstIDN {
+					RaiseLanguageCompileError(
+						analyzer.file.Path,
+						analyzer.file.Data,
+						"invalid variable name, variable name must be in a form of identifier",
+						variableNode.Position,
+					)
+				}
+				analyzer.write(variableNode.Str0, false)
+				if index < len(node.Ast0.AstArr0)-1 {
+					analyzer.write(", ", false)
+				}
 			}
 		}
-		analyzer.write(":=", false)
+		analyzer.write(" := ", false)
 		analyzer.expression(node.Ast1)
+		if node.Ast0.Ttype == AstIDN {
+			if analyzer.scope.Env.HasLocalSymbol(node.Ast0.Str0) {
+				RaiseLanguageCompileError(
+					analyzer.file.Path,
+					analyzer.file.Data,
+					"duplicate variable name",
+					node.Ast0.Position,
+				)
+			}
+			analyzer.scope.Env.AddSymbol(TSymbol{
+				Name:      node.Ast0.Str0,
+				NameSpace: node.Ast0.Str0,
+				DataType:  analyzer.stack.Pop().DataType,
+				Position:  node.Ast0.Position,
+				IsGlobal:  analyzer.scope.InGlobal(),
+			})
+		} else {
+			mustTupleType := analyzer.stack.Pop().DataType
+			if !types.IsTuple(mustTupleType) {
+				RaiseLanguageCompileError(
+					analyzer.file.Path,
+					analyzer.file.Data,
+					"cannot unpack non-tuple type",
+					node.Ast1.Position,
+				)
+			}
+			tupleTypes := mustTupleType.GetElements()
+			if len(tupleTypes) != len(node.Ast0.AstArr0) {
+				RaiseLanguageCompileError(
+					analyzer.file.Path,
+					analyzer.file.Data,
+					"unpacked tuple must have the same number of elements as the number of variables",
+					node.Ast1.Position,
+				)
+			}
+			for index, variableNode := range node.Ast0.AstArr0 {
+				variableType := tupleTypes[index]
+				if analyzer.scope.Env.HasLocalSymbol(variableNode.Str0) {
+					RaiseLanguageCompileError(
+						analyzer.file.Path,
+						analyzer.file.Data,
+						"duplicate variable name",
+						variableNode.Position,
+					)
+				}
+				analyzer.scope.Env.AddSymbol(TSymbol{
+					Name:      variableNode.Str0,
+					NameSpace: variableNode.Str0,
+					DataType:  variableType,
+					Position:  variableNode.Position,
+					IsGlobal:  analyzer.scope.InGlobal(),
+				})
+			}
+		}
 	default:
 		RaiseLanguageCompileError(
 			analyzer.file.Path,
@@ -880,7 +945,12 @@ func (analyzer *TAnalyzer) visitLocal(node *TAst) {
 
 func (analyzer *TAnalyzer) program(node *TAst) {
 	analyzer.write("package main", true)
-	analyzer.scope = CreateScope(nil, ScopeGlobal)
+	analyzer.scope = &TScope{
+		Parent: nil,
+		Env:    analyzer.file.Env,
+		Type:   ScopeGlobal,
+		Return: nil,
+	}
 	for index, child := range node.AstArr0 {
 		analyzer.statement(child)
 		if index < len(node.AstArr0)-1 {

@@ -42,6 +42,10 @@ type TTyping struct {
 	methods   []*TPair   // Type methods
 }
 
+func (t *TTyping) GetElements() []*TTyping {
+	return t.elements
+}
+
 func (t *TTyping) HasMember(name string) bool {
 	for _, member := range t.members {
 		if member.Name == name {

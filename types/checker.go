@@ -48,6 +48,10 @@ func IsFunc(ttype *TTyping) bool {
 	return ttype.size == TypeFunc
 }
 
+func IsTuple(ttype *TTyping) bool {
+	return ttype.size == TypeTuple
+}
+
 func IsTheSameInstance(ttype1 *TTyping, ttype2 *TTyping) bool {
 	if ttype1 == ttype2 {
 		return true
