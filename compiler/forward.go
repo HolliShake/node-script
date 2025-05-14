@@ -581,7 +581,7 @@ func (f *TForward) forwardConst(fileJob TFileJob, node *TAst) {
 			DataType:     dataType,
 			Position:     nameNode.Position,
 			IsGlobal:     true,
-			IsConst:      false,
+			IsConst:      true,
 			IsInitialize: valuNode != nil,
 		})
 	}
