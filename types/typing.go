@@ -21,13 +21,23 @@ const (
 )
 
 type TPair struct {
-	Name     string
-	DataType *TTyping
+	Name      string
+	Namespace string
+	DataType  *TTyping
 }
 
 func CreatePair(name string, dataType *TTyping) *TPair {
 	pair := new(TPair)
 	pair.Name = name
+	pair.Namespace = ""
+	pair.DataType = dataType
+	return pair
+}
+
+func CreatePairWithNamespace(name string, namespace string, dataType *TTyping) *TPair {
+	pair := new(TPair)
+	pair.Name = name
+	pair.Namespace = namespace
 	pair.DataType = dataType
 	return pair
 }
@@ -90,8 +100,8 @@ func (t *TTyping) GetMethods() []*TPair {
 	return t.methods
 }
 
-func (t *TTyping) AddMethod(name string, dataType *TTyping) {
-	pair := CreatePair(name, dataType)
+func (t *TTyping) AddMethod(name string, namespace string, dataType *TTyping) {
+	pair := CreatePairWithNamespace(name, namespace, dataType)
 	t.methods = append(t.methods, pair)
 }
 

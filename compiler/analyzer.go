@@ -151,6 +151,21 @@ func (analyzer *TAnalyzer) getType(node *TAst) *types.TTyping {
 
 func (analyzer *TAnalyzer) expression(node *TAst) {
 	switch node.Ttype {
+	case AstIDN:
+		if !analyzer.scope.Env.HasLocalSymbol(node.Str0) {
+			RaiseLanguageCompileError(
+				analyzer.file.Path,
+				analyzer.file.Data,
+				"undefined symbol",
+				node.Position,
+			)
+		}
+		symbolInfo := analyzer.scope.Env.GetSymbol(node.Str0)
+		analyzer.write(symbolInfo.NameSpace, false)
+		analyzer.stack.Push(CreateValue(
+			symbolInfo.DataType,
+			nil,
+		))
 	case AstInt:
 		i64, err := strconv.ParseInt(node.Str0, 10, 64)
 		if err != nil {
@@ -363,6 +378,22 @@ func (analyzer *TAnalyzer) statement(node *TAst) {
 	case AstEmptyStmnt:
 		analyzer.write("", false)
 	case AstExpressionStmnt:
+		if analyzer.scope.InGlobal() {
+			RaiseLanguageCompileError(
+				analyzer.file.Path,
+				analyzer.file.Data,
+				"expression is not allowed in here",
+				node.Position,
+			)
+		}
+		if node.Ast0.Ttype == AstIDN || IsConstantValueNode(node.Ast0) {
+			RaiseLanguageCompileError(
+				analyzer.file.Path,
+				analyzer.file.Data,
+				"unused expression: this expression has no effect and its result is discarded",
+				node.Position,
+			)
+		}
 		analyzer.srcTb()
 		analyzer.expression(node.Ast0)
 	default:
@@ -624,7 +655,9 @@ func (analyzer *TAnalyzer) visitDefine(node *TAst) {
 				nameNode.Position,
 			)
 		}
-		thisArgType.AddMethod(nameNode.Str0,
+		thisArgType.AddMethod(
+			nameNode.Str0,
+			JoinVariableName(GetFileNameWithoutExtension(analyzer.file.Path), nameNode.Str0),
 			types.TFunc(
 				parametersTypesPair,
 				returnType,
