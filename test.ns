@@ -1,4 +1,4 @@
-import ( Person, King ) from "./syntax.ns";
+import ( Person, King, DATA ) from "./syntax.ns";
 import (Test) from "./import.ns";
 
 struct Dog {
@@ -7,10 +7,11 @@ struct Dog {
 }
 
 define (d Dog) GetName() str {
-    
+
 }
 
 define name() Person {
     
 }
+
 

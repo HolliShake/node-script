@@ -532,7 +532,7 @@ func (analyzer *TAnalyzer) visitDefine(node *TAst) {
 		RaiseLanguageCompileError(
 			analyzer.file.Path,
 			analyzer.file.Data,
-			"invalid function name, function name must be in a form of identifier",
+			INVALID_FUNCTION_NAME,
 			nameNode.Position,
 		)
 	}
@@ -569,7 +569,7 @@ func (analyzer *TAnalyzer) visitDefine(node *TAst) {
 			RaiseLanguageCompileError(
 				analyzer.file.Path,
 				analyzer.file.Data,
-				"duplicate symbol name",
+				INVALID_FUNCTION_PARAM_NAME_DUPLICATE,
 				thisArgNode.Position,
 			)
 		}
@@ -590,7 +590,7 @@ func (analyzer *TAnalyzer) visitDefine(node *TAst) {
 			RaiseLanguageCompileError(
 				analyzer.file.Path,
 				analyzer.file.Data,
-				"invalid parameter name, parameter name must be in a form of identifier",
+				INVALID_FUNCTION_PARAM_NAME,
 				paramNameNode.Position,
 			)
 		}
@@ -613,7 +613,7 @@ func (analyzer *TAnalyzer) visitDefine(node *TAst) {
 			RaiseLanguageCompileError(
 				analyzer.file.Path,
 				analyzer.file.Data,
-				"duplicate symbol name",
+				INVALID_FUNCTION_PARAM_NAME_DUPLICATE,
 				paramNameNode.Position,
 			)
 		}
@@ -721,7 +721,7 @@ func (analyzer *TAnalyzer) visitImport(node *TAst) {
 			RaiseLanguageCompileError(
 				analyzer.file.Path,
 				analyzer.file.Data,
-				"invalid import name, import name must be in a form of identifier",
+				INVALID_IMPORT_NAME,
 				nameNode.Position,
 			)
 		}
@@ -759,7 +759,7 @@ func (analyzer *TAnalyzer) visitVar(node *TAst) {
 			RaiseLanguageCompileError(
 				analyzer.file.Path,
 				analyzer.file.Data,
-				"invalid variable name, variable name must be in a form of identifier",
+				INVALID_VARIABLE_NAME,
 				nameNode.Position,
 			)
 		}
@@ -814,7 +814,7 @@ func (analyzer *TAnalyzer) visitVar(node *TAst) {
 				RaiseLanguageCompileError(
 					analyzer.file.Path,
 					analyzer.file.Data,
-					"duplicate symbol name",
+					INVALID_VARIABLE_NAME_DUPLICATE,
 					nameNode.Position,
 				)
 			}
@@ -867,7 +867,7 @@ func (analyzer *TAnalyzer) visitConst(node *TAst) {
 			RaiseLanguageCompileError(
 				analyzer.file.Path,
 				analyzer.file.Data,
-				"invalid constant name, constant name must be in a form of identifier",
+				INVALID_VARIABLE_NAME,
 				nameNode.Position,
 			)
 		}
@@ -941,7 +941,7 @@ func (analyzer *TAnalyzer) visitConst(node *TAst) {
 				RaiseLanguageCompileError(
 					analyzer.file.Path,
 					analyzer.file.Data,
-					"duplicate symbol name",
+					INVALID_VARIABLE_NAME_DUPLICATE,
 					nameNode.Position,
 				)
 			}
@@ -990,7 +990,7 @@ func (analyzer *TAnalyzer) visitLocal(node *TAst) {
 			RaiseLanguageCompileError(
 				analyzer.file.Path,
 				analyzer.file.Data,
-				"invalid variable name, variable name must be in a form of identifier",
+				INVALID_VARIABLE_NAME,
 				nameNode.Position,
 			)
 		}
@@ -1045,7 +1045,7 @@ func (analyzer *TAnalyzer) visitLocal(node *TAst) {
 				RaiseLanguageCompileError(
 					analyzer.file.Path,
 					analyzer.file.Data,
-					"duplicate symbol name",
+					INVALID_VARIABLE_NAME_DUPLICATE,
 					nameNode.Position,
 				)
 			}

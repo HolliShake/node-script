@@ -216,7 +216,7 @@ func (f *TForward) getType(fileJob TFileJob, node *TAst) *types.TTyping {
 			RaiseLanguageCompileError(
 				fileJob.Path,
 				fileJob.Data,
-				"invalid hashmap key type",
+				INVALID_HASHMAP_KEY_TYPE,
 				keyAst.Position,
 			)
 		}
@@ -246,7 +246,7 @@ func (f *TForward) forwardStruct(fileJob TFileJob, node *TAst) {
 		RaiseLanguageCompileError(
 			fileJob.Path,
 			fileJob.Data,
-			"invalid struct name, struct name must be in a form of identifier",
+			INVALID_STRUCT_NAME,
 			nameNode.Position,
 		)
 	}
@@ -254,16 +254,8 @@ func (f *TForward) forwardStruct(fileJob TFileJob, node *TAst) {
 		RaiseLanguageCompileError(
 			fileJob.Path,
 			fileJob.Data,
-			"invalid struct, struct must have at least one attribute",
+			INVALID_STRUCT_ATTR_EMPTY,
 			node.Position,
-		)
-	}
-	if fileJob.Env.HasLocalSymbol(nameNode.Str0) {
-		RaiseLanguageCompileError(
-			fileJob.Path,
-			fileJob.Data,
-			"duplicate struct name",
-			nameNode.Position,
 		)
 	}
 	attributes := make([]*types.TPair, 0)
@@ -274,7 +266,7 @@ func (f *TForward) forwardStruct(fileJob TFileJob, node *TAst) {
 			RaiseLanguageCompileError(
 				fileJob.Path,
 				fileJob.Data,
-				"invalid attribute name, attribute name must be in a form of identifier",
+				INVALID_STRUCT_ATTR_NAME,
 				attrN.Position,
 			)
 		}
@@ -291,7 +283,7 @@ func (f *TForward) forwardStruct(fileJob TFileJob, node *TAst) {
 			RaiseLanguageCompileError(
 				fileJob.Path,
 				fileJob.Data,
-				"duplicate attribute name",
+				INVALID_STRUCT_ATTR_DUPLICATE,
 				attrN.Position,
 			)
 		}
@@ -306,6 +298,14 @@ func (f *TForward) forwardStruct(fileJob TFileJob, node *TAst) {
 		})
 		attributes = append(attributes, types.CreatePair(attrN.Str0, dataType))
 	}
+	if fileJob.Env.HasLocalSymbol(nameNode.Str0) {
+		RaiseLanguageCompileError(
+			fileJob.Path,
+			fileJob.Data,
+			INVALID_STRUCT_NAME_DUPLICATE,
+			nameNode.Position,
+		)
+	}
 	fileJob.Env.AddSymbol(TSymbol{
 		Name:         nameNode.Str0,
 		NameSpace:    JoinVariableName(GetFileNameWithoutExtension(fileJob.Path), nameNode.Str0),
@@ -318,6 +318,7 @@ func (f *TForward) forwardStruct(fileJob TFileJob, node *TAst) {
 }
 
 func (f *TForward) forwardDefine(fileJob TFileJob, node *TAst, error bool) {
+	newEnv := CreateEnv(fileJob.Env)
 	nameNode := node.Ast0
 	returnTypeNode := node.Ast1
 	paramNamesNode := node.AstArr0
@@ -326,15 +327,7 @@ func (f *TForward) forwardDefine(fileJob TFileJob, node *TAst, error bool) {
 		RaiseLanguageCompileError(
 			fileJob.Path,
 			fileJob.Data,
-			"invalid function name, function name must be in a form of identifier",
-			nameNode.Position,
-		)
-	}
-	if fileJob.Env.HasLocalSymbol(nameNode.Str0) {
-		RaiseLanguageCompileError(
-			fileJob.Path,
-			fileJob.Data,
-			"duplicate function name",
+			INVALID_FUNCTION_NAME,
 			nameNode.Position,
 		)
 	}
@@ -345,7 +338,7 @@ func (f *TForward) forwardDefine(fileJob TFileJob, node *TAst, error bool) {
 			RaiseLanguageCompileError(
 				fileJob.Path,
 				fileJob.Data,
-				"invalid parameter name, parameter name must be in a form of identifier",
+				INVALID_FUNCTION_PARAM_NAME,
 				nameNode.Position,
 			)
 		}
@@ -355,7 +348,7 @@ func (f *TForward) forwardDefine(fileJob TFileJob, node *TAst, error bool) {
 				RaiseLanguageCompileError(
 					fileJob.Path,
 					fileJob.Data,
-					"missing type, or type is invalid",
+					INVALID_TYPE_OR_MISSING,
 					paramTypeNode.Position,
 				)
 			}
@@ -365,6 +358,23 @@ func (f *TForward) forwardDefine(fileJob TFileJob, node *TAst, error bool) {
 			})
 			return
 		}
+		if newEnv.HasLocalSymbol(nameNode.Str0) {
+			RaiseLanguageCompileError(
+				fileJob.Path,
+				fileJob.Data,
+				INVALID_FUNCTION_PARAM_NAME_DUPLICATE,
+				nameNode.Position,
+			)
+		}
+		newEnv.AddSymbol(TSymbol{
+			Name:         nameNode.Str0,
+			NameSpace:    nameNode.Str0,
+			DataType:     paramType,
+			Position:     nameNode.Position,
+			IsGlobal:     true,
+			IsConst:      false,
+			IsInitialize: true,
+		})
 		parameters = append(parameters, types.CreatePair(nameNode.Str0, paramType))
 	}
 	returnType := f.getType(fileJob, returnTypeNode)
@@ -373,7 +383,7 @@ func (f *TForward) forwardDefine(fileJob TFileJob, node *TAst, error bool) {
 			RaiseLanguageCompileError(
 				fileJob.Path,
 				fileJob.Data,
-				"missing type, or type is invalid",
+				INVALID_TYPE_OR_MISSING,
 				returnTypeNode.Position,
 			)
 		}
@@ -382,6 +392,14 @@ func (f *TForward) forwardDefine(fileJob TFileJob, node *TAst, error bool) {
 			Node:    node,
 		})
 		return
+	}
+	if fileJob.Env.HasLocalSymbol(nameNode.Str0) {
+		RaiseLanguageCompileError(
+			fileJob.Path,
+			fileJob.Data,
+			INVALID_FUNCTION_NAME_DUPLICATE,
+			nameNode.Position,
+		)
 	}
 	fileJob.Env.AddSymbol(TSymbol{
 		Name:         nameNode.Str0,
@@ -401,7 +419,7 @@ func (f *TForward) forwardImport(fileJob TFileJob, node *TAst) {
 		RaiseLanguageCompileError(
 			fileJob.Path,
 			fileJob.Data,
-			"invalid import path, import path must be in a form of string",
+			INVALID_IMPORT_PATH,
 			pathNode.Position,
 		)
 	}
@@ -409,7 +427,7 @@ func (f *TForward) forwardImport(fileJob TFileJob, node *TAst) {
 		RaiseLanguageCompileError(
 			fileJob.Path,
 			fileJob.Data,
-			"invalid import, import must have at least one attribute",
+			INVALID_IMPORT_NAMES_EMPTY,
 			node.Position,
 		)
 	}
@@ -417,7 +435,7 @@ func (f *TForward) forwardImport(fileJob TFileJob, node *TAst) {
 		RaiseLanguageCompileError(
 			fileJob.Path,
 			fileJob.Data,
-			"invalid import path, import path must be relative",
+			INVALID_IMPORT_PATH_VALUE,
 			pathNode.Position,
 		)
 	}
@@ -432,7 +450,7 @@ func (f *TForward) forwardImport(fileJob TFileJob, node *TAst) {
 			RaiseLanguageCompileError(
 				fileJob.Path,
 				fileJob.Data,
-				"import file not found",
+				INVALID_IMPORT_PATH_NOT_FOUND,
 				pathNode.Position,
 			)
 		}
@@ -465,7 +483,7 @@ func (f *TForward) forwardImport(fileJob TFileJob, node *TAst) {
 			RaiseLanguageCompileError(
 				fileJob.Path,
 				fileJob.Data,
-				"invalid import name, import name must be in a form of identifier",
+				INVALID_IMPORT_NAME,
 				nameNode.Position,
 			)
 		}
@@ -481,7 +499,7 @@ func (f *TForward) forwardImport(fileJob TFileJob, node *TAst) {
 			RaiseLanguageCompileError(
 				fileJob.Path,
 				fileJob.Data,
-				"duplicate symbol name",
+				INVALID_IMPORT_NAME_DUPLICATE,
 				nameNode.Position,
 			)
 		}
@@ -509,7 +527,7 @@ func (f *TForward) forwardVar(fileJob TFileJob, node *TAst) {
 			RaiseLanguageCompileError(
 				fileJob.Path,
 				fileJob.Data,
-				"invalid variable name, variable name must be in a form of identifier",
+				INVALID_VARIABLE_NAME,
 				nameNode.Position,
 			)
 		}
@@ -526,7 +544,7 @@ func (f *TForward) forwardVar(fileJob TFileJob, node *TAst) {
 			RaiseLanguageCompileError(
 				fileJob.Path,
 				fileJob.Data,
-				"duplicate variable name",
+				INVALID_VARIABLE_NAME_DUPLICATE,
 				nameNode.Position,
 			)
 		}
@@ -554,7 +572,7 @@ func (f *TForward) forwardConst(fileJob TFileJob, node *TAst) {
 			RaiseLanguageCompileError(
 				fileJob.Path,
 				fileJob.Data,
-				"invalid variable name, variable name must be in a form of identifier",
+				INVALID_VARIABLE_NAME,
 				nameNode.Position,
 			)
 		}
@@ -571,7 +589,7 @@ func (f *TForward) forwardConst(fileJob TFileJob, node *TAst) {
 			RaiseLanguageCompileError(
 				fileJob.Path,
 				fileJob.Data,
-				"duplicate variable name",
+				INVALID_VARIABLE_NAME_DUPLICATE,
 				nameNode.Position,
 			)
 		}
@@ -628,7 +646,7 @@ func (f *TForward) build() {
 			RaiseLanguageCompileError(
 				missingType.file.Path,
 				missingType.file.Data,
-				"missing type, or type is invalid",
+				INVALID_TYPE_OR_MISSING,
 				missingType.TypeAst.Position,
 			)
 		}
