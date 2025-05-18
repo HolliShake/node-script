@@ -3,6 +3,8 @@ package main
 const (
 	INVALID_TYPE_OR_MISSING               = "missing type or type is invalid"
 	INVALID_HASHMAP_KEY_TYPE              = "invalid hashmap key type"
+	INVALID_HASHMAP_VALUE_TYPE            = "invalid hashmap value type"
+	INVALID_ARRAY_ELEMENT_TYPE            = "invalid array element type"
 	INVALID_STRUCT_NAME                   = "struct name must be an identifier"
 	INVALID_STRUCT_NAME_DUPLICATE         = "struct name must be unique"
 	INVALID_STRUCT_ATTR_EMPTY             = "struct must have at least one attribute"

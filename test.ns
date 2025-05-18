@@ -1,5 +1,4 @@
 import ( Person, King, DATA ) from "./syntax.ns";
-import (Test) from "./import.ns";
 
 struct Dog {
     Name str;

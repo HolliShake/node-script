@@ -1,10 +1,15 @@
 package types
 
-import "math"
+import (
+	"fmt"
+	"math"
+	"strings"
+)
 
 type TypeCode int
 
 const (
+	TypeAny    TypeCode = 69420
 	TypeI08    TypeCode = 7
 	TypeI16    TypeCode = 15
 	TypeI32    TypeCode = 31
@@ -18,6 +23,15 @@ const (
 	TypeStruct TypeCode = 0x8badf00d
 	TypeFunc   TypeCode = 0x8badcafe
 	TypeTuple  TypeCode = 0x8badbeef
+)
+
+const (
+	GoAny = "any"
+	GoInt = "int"
+	GoFlt = "float64"
+	GoStr = "string"
+	GoBit = "bool"
+	GoNil = ""
 )
 
 type TPair struct {
@@ -50,6 +64,15 @@ type TTyping struct {
 	elements  []*TTyping // Tuple elements
 	members   []*TPair   // Struct attribute | Function parameter
 	methods   []*TPair   // Type methods
+	variadic  bool       // Function variadic
+}
+
+func (t *TTyping) GetInternal0() *TTyping {
+	return t.internal0
+}
+
+func (t *TTyping) GetInternal1() *TTyping {
+	return t.internal1
 }
 
 func (t *TTyping) GetElements() []*TTyping {
@@ -115,18 +138,34 @@ func (t *TTyping) DefaultValue() string {
 	case TypeNum:
 		return "0.0"
 	case TypeStr:
-		return ""
+		return "\"\""
 	case TypeBit:
 		return "false"
 	case TypeNil:
-		return "nil"
+		return ""
+	case TypeMap:
+		return fmt.Sprintf("make(map[%s]%s)", t.internal0.ToGoType(), t.internal1.ToGoType())
+	case TypeArr:
+		return fmt.Sprintf("make([]%s, 0)", t.internal0.ToGoType())
+	case TypeTuple:
+		elements := make([]string, len(t.elements))
+		for i, element := range t.elements {
+			elements[i] = element.DefaultValue()
+		}
+		return "(" + strings.Join(elements, ",") + ")"
+	case TypeStruct:
+		return t.repr + "{}"
+	case TypeFunc:
+		panic("invalid type or not implemented")
 	default:
-		panic("invalid type")
+		panic("invalid type or not implemented")
 	}
 }
 func (t *TTyping) ToString() string {
 	switch t.size {
-	case TypeI08,
+	case
+		TypeAny,
+		TypeI08,
 		TypeI16,
 		TypeI32,
 		TypeI64,
@@ -136,41 +175,54 @@ func (t *TTyping) ToString() string {
 		TypeNil,
 		TypeMap,
 		TypeArr,
-		TypeStruct,
-		TypeFunc:
+		TypeStruct:
 		return t.repr
+	case TypeTuple:
+		elements := make([]string, len(t.elements))
+		for i, element := range t.elements {
+			elements[i] = element.ToString()
+		}
+		return "(" + strings.Join(elements, ",") + ")"
+	case TypeFunc:
+		panic("invalid type or not implemented")
+	default:
+		panic("invalid type or not implemented")
 	}
-	return "[invalid]"
 }
 
 func (t *TTyping) ToGoType() string {
 	switch t.size {
-	case TypeI08:
-		return "int8"
-	case TypeI16:
-		return "int16"
-	case TypeI32:
-		return "int32"
-	case TypeI64:
-		return "int64"
+	case TypeAny:
+		return GoAny
+	case TypeI08,
+		TypeI16,
+		TypeI32,
+		TypeI64:
+		return GoInt
 	case TypeNum:
-		return "float64"
+		return GoFlt
 	case TypeStr:
-		return "string"
+		return GoStr
 	case TypeBit:
-		return "bool"
+		return GoBit
 	case TypeNil:
-		return "void"
-	case TypeArr:
-		return "[]" + t.internal0.ToGoType()
+		return GoNil
 	case TypeMap:
 		return "map[" + t.internal0.ToGoType() + "]" + t.internal1.ToGoType()
+	case TypeArr:
+		return "[]" + t.internal0.ToGoType()
+	case TypeTuple:
+		elements := make([]string, len(t.elements))
+		for i, element := range t.elements {
+			elements[i] = element.ToGoType()
+		}
+		return "(" + strings.Join(elements, ",") + ")"
 	case TypeStruct:
 		return t.repr
 	case TypeFunc:
-		return "func{}"
+		panic("invalid type or not implemented")
 	default:
-		panic("invalid type")
+		panic("invalid type or not implemented")
 	}
 }
 
@@ -183,6 +235,10 @@ func CreateTyping(repr string, size TypeCode) *TTyping {
 	typing.members = nil
 	typing.methods = make([]*TPair, 0)
 	return typing
+}
+
+func TAny() *TTyping {
+	return CreateTyping("any", TypeAny)
 }
 
 func TInt08() *TTyping {
@@ -236,10 +292,11 @@ func TStruct(name string, attributes []*TPair) *TTyping {
 	return typing
 }
 
-func TFunc(attributes []*TPair, returnType *TTyping) *TTyping {
+func TFunc(variadic bool, attributes []*TPair, returnType *TTyping) *TTyping {
 	typing := CreateTyping("func{}", TypeFunc)
 	typing.internal0 = returnType
 	typing.members = attributes
+	typing.variadic = variadic
 	return typing
 }
 
@@ -247,4 +304,11 @@ func TTuple(elements []*TTyping) *TTyping {
 	typing := CreateTyping("tuple", TypeTuple)
 	typing.elements = elements
 	return typing
+}
+
+func WhichBigger(a *TTyping, b *TTyping) *TTyping {
+	if a.size > b.size {
+		return a
+	}
+	return b
 }

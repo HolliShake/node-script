@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"strconv"
 	"unicode"
 )
 
@@ -140,7 +141,7 @@ func (tokenizer *TTokenizer) getNum() TToken {
 	if value == "0" {
 		switch tokenizer.look {
 		case 'x', 'X':
-			value += string(tokenizer.look)
+			value = ""
 			tokenizer.forward()
 			if !tokenizer.isHex() {
 				RaiseLanguageCompileError(
@@ -154,8 +155,18 @@ func (tokenizer *TTokenizer) getNum() TToken {
 				value += string(tokenizer.look)
 				tokenizer.forward()
 			}
+			hexValue, err := strconv.ParseInt(value, 16, 64)
+			if err != nil {
+				RaiseLanguageCompileError(
+					tokenizer.File,
+					tokenizer.Data,
+					fmt.Sprintf("invalid hex number %s", value),
+					position,
+				)
+			}
+			value = fmt.Sprintf("%d", hexValue)
 		case 'o', 'O':
-			value += string(tokenizer.look)
+			value = ""
 			tokenizer.forward()
 			if !tokenizer.isOct() {
 				RaiseLanguageCompileError(
@@ -169,8 +180,18 @@ func (tokenizer *TTokenizer) getNum() TToken {
 				value += string(tokenizer.look)
 				tokenizer.forward()
 			}
+			octValue, err := strconv.ParseInt(value, 8, 64)
+			if err != nil {
+				RaiseLanguageCompileError(
+					tokenizer.File,
+					tokenizer.Data,
+					fmt.Sprintf("invalid oct number %s", value),
+					position,
+				)
+			}
+			value = fmt.Sprintf("%d", octValue)
 		case 'b', 'B':
-			value += string(tokenizer.look)
+			value = ""
 			tokenizer.forward()
 			if !tokenizer.isBin() {
 				RaiseLanguageCompileError(
@@ -184,6 +205,16 @@ func (tokenizer *TTokenizer) getNum() TToken {
 				value += string(tokenizer.look)
 				tokenizer.forward()
 			}
+			binValue, err := strconv.ParseInt(value, 2, 64)
+			if err != nil {
+				RaiseLanguageCompileError(
+					tokenizer.File,
+					tokenizer.Data,
+					fmt.Sprintf("invalid bin number %s", value),
+					position,
+				)
+			}
+			value = fmt.Sprintf("%d", binValue)
 		}
 		if value != "0" {
 			return TToken{

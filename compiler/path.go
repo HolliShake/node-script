@@ -9,7 +9,7 @@ import (
 func IsDir(path string) bool {
 	info, err := os.Stat(path)
 	if err != nil {
-		panic(err)
+		RaiseSystemError(err)
 	}
 
 	return info.IsDir()
@@ -34,7 +34,7 @@ func GetFileExtension(path string) string {
 
 func GetDir(path string) string {
 	if !IsAbsolutePath(path) {
-		panic("path must be an absolute path")
+		RaiseSystemError("path must be an absolute path")
 	}
 	return filepath.Dir(path)
 }
@@ -46,12 +46,12 @@ func ToAbsolutePath(path string) string {
 	// Get the current working directory
 	currentDir, err := os.Getwd()
 	if err != nil {
-		panic(err)
+		RaiseSystemError(err)
 	}
 	// Join the current directory with the relative path
 	absolutePath, err := filepath.Abs(filepath.Join(currentDir, path))
 	if err != nil {
-		panic(err)
+		RaiseSystemError(err)
 	}
 
 	return absolutePath
@@ -59,7 +59,7 @@ func ToAbsolutePath(path string) string {
 
 func ResolvePath(currentDir string, relativePath string) string {
 	if !(IsAbsolutePath(currentDir) && IsDir(currentDir)) {
-		panic("currentDir must be an absolute path")
+		RaiseSystemError("currentDir must be an absolute path")
 	}
 	// Check if the path is already absolute
 	if IsAbsolutePath(relativePath) {
@@ -77,7 +77,7 @@ func ResolvePath(currentDir string, relativePath string) string {
 		}
 		finalPath = filepath.Join(current, withDepth)
 	} else {
-		panic("invalid path, path must be in a form of relative path")
+		RaiseSystemError("invalid path, path must be in a form of relative path")
 	}
 	return finalPath
 }

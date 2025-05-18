@@ -13,6 +13,7 @@ type TFileJob struct {
 	Ast    *TAst
 	Env    *TEnv
 	IsDone bool
+	IsMain bool
 }
 
 type TDelayedImport struct {
@@ -64,11 +65,39 @@ func (f *TForward) getFile(path string) TFileJob {
 			return f.Files[i]
 		}
 	}
-	panic("file not found")
+	RaiseSystemError("file not found")
+	return TFileJob{}
 }
 
 func (f *TForward) pushFile(file TFileJob) {
 	f.Files = append(f.Files, file)
+}
+
+func (f *TForward) replaceFile(file TFileJob) {
+	for i := range f.Files {
+		if f.Files[i].Path == file.Path {
+			f.Files[i] = file
+			return
+		}
+	}
+}
+
+func (f *TForward) makeUniqueFile() {
+	// Create a map to track unique files by path
+	uniqueFiles := make(map[string]TFileJob)
+
+	// Add each file to the map, which will automatically handle duplicates
+	for _, file := range f.Files {
+		uniqueFiles[file.Path] = file
+	}
+
+	// Clear the current files slice
+	f.Files = make([]TFileJob, 0, len(uniqueFiles))
+
+	// Rebuild the files slice with only unique entries
+	for _, file := range uniqueFiles {
+		f.Files = append(f.Files, file)
+	}
 }
 
 // IMPORT
@@ -79,7 +108,7 @@ func (f *TForward) hasImport() bool {
 
 func (f *TForward) popImport() TFileJob {
 	if !f.hasImport() {
-		panic("no import to pop")
+		RaiseSystemError("no import to pop")
 	}
 	file := f.Imports[len(f.Imports)-1]
 	f.Imports = f.Imports[:len(f.Imports)-1]
@@ -98,7 +127,7 @@ func (f *TForward) hasDelayed() bool {
 
 func (f *TForward) popDelayed() TDelayedImport {
 	if !f.hasDelayed() {
-		panic("no delayed import to pop")
+		RaiseSystemError("no delayed import to pop")
 	}
 	delayed := f.Delayed[len(f.Delayed)-1]
 	f.Delayed = f.Delayed[:len(f.Delayed)-1]
@@ -117,7 +146,7 @@ func (f *TForward) hasMissingTypes() bool {
 
 func (f *TForward) popMissingTypes() TMissingTypeJob {
 	if !f.hasMissingTypes() {
-		panic("no missing type to pop")
+		RaiseSystemError("no missing type to pop")
 	}
 	missingType := f.MissingTypes[len(f.MissingTypes)-1]
 	f.MissingTypes = f.MissingTypes[:len(f.MissingTypes)-1]
@@ -136,7 +165,7 @@ func (f *TForward) hasDelayedDefines() bool {
 
 func (f *TForward) popDelayedDefines() TDelayedDefine {
 	if !f.hasDelayedDefines() {
-		panic("no delayed define to pop")
+		RaiseSystemError("no delayed define to pop")
 	}
 	delayedDefine := f.DelayedDefines[len(f.DelayedDefines)-1]
 	f.DelayedDefines = f.DelayedDefines[:len(f.DelayedDefines)-1]
@@ -155,7 +184,7 @@ func (f *TForward) hasImportLater() bool {
 
 func (f *TForward) popImportLater() TImportLater {
 	if !f.hasImportLater() {
-		panic("no import later to pop")
+		RaiseSystemError("no import later to pop")
 	}
 	importLater := f.ImportLater[len(f.ImportLater)-1]
 	f.ImportLater = f.ImportLater[:len(f.ImportLater)-1]
@@ -172,7 +201,9 @@ func (f *TForward) getType(fileJob TFileJob, node *TAst) *types.TTyping {
 	switch node.Ttype {
 	case AstIDN:
 		if fileJob.Env.HasLocalSymbol(node.Str0) {
-			return fileJob.Env.GetSymbol(node.Str0).DataType
+			symbol := fileJob.Env.GetSymbol(node.Str0)
+			(&symbol).IsUsed = true
+			return symbol.DataType
 		}
 	case AstTypeInt8:
 		return f.State.TI08
@@ -220,6 +251,14 @@ func (f *TForward) getType(fileJob TFileJob, node *TAst) *types.TTyping {
 				keyAst.Position,
 			)
 		}
+		if types.IsVoid(valType) {
+			RaiseLanguageCompileError(
+				fileJob.Path,
+				fileJob.Data,
+				INVALID_HASHMAP_VALUE_TYPE,
+				valAst.Position,
+			)
+		}
 		return types.THashMap(keyType, valType)
 	case AstTypeArray:
 		elementAst := node.Ast0
@@ -231,6 +270,14 @@ func (f *TForward) getType(fileJob TFileJob, node *TAst) *types.TTyping {
 				TypeAst: elementAst,
 			})
 			return nil
+		}
+		if types.IsVoid(elementType) {
+			RaiseLanguageCompileError(
+				fileJob.Path,
+				fileJob.Data,
+				INVALID_ARRAY_ELEMENT_TYPE,
+				elementAst.Position,
+			)
 		}
 		return types.TArray(elementType)
 	}
@@ -294,6 +341,7 @@ func (f *TForward) forwardStruct(fileJob TFileJob, node *TAst) {
 			Position:     attrN.Position,
 			IsGlobal:     false,
 			IsConst:      false,
+			IsUsed:       true,
 			IsInitialize: false,
 		})
 		attributes = append(attributes, types.CreatePair(attrN.Str0, dataType))
@@ -309,10 +357,12 @@ func (f *TForward) forwardStruct(fileJob TFileJob, node *TAst) {
 	fileJob.Env.AddSymbol(TSymbol{
 		Name:         nameNode.Str0,
 		NameSpace:    JoinVariableName(GetFileNameWithoutExtension(fileJob.Path), nameNode.Str0),
+		Module:       GetFileNameWithoutExtension(fileJob.Path),
 		DataType:     types.TStruct(JoinVariableName(GetFileNameWithoutExtension(fileJob.Path), nameNode.Str0), attributes),
 		Position:     node.Position,
 		IsGlobal:     true,
 		IsConst:      true,
+		IsUsed:       true,
 		IsInitialize: true,
 	})
 }
@@ -373,6 +423,7 @@ func (f *TForward) forwardDefine(fileJob TFileJob, node *TAst, error bool) {
 			Position:     nameNode.Position,
 			IsGlobal:     true,
 			IsConst:      false,
+			IsUsed:       true,
 			IsInitialize: true,
 		})
 		parameters = append(parameters, types.CreatePair(nameNode.Str0, paramType))
@@ -404,10 +455,12 @@ func (f *TForward) forwardDefine(fileJob TFileJob, node *TAst, error bool) {
 	fileJob.Env.AddSymbol(TSymbol{
 		Name:         nameNode.Str0,
 		NameSpace:    JoinVariableName(GetFileNameWithoutExtension(fileJob.Path), nameNode.Str0),
-		DataType:     types.TFunc(parameters, returnType),
+		Module:       GetFileNameWithoutExtension(fileJob.Path),
+		DataType:     types.TFunc(false, parameters, returnType),
 		Position:     node.Position,
 		IsGlobal:     true,
 		IsConst:      true,
+		IsUsed:       true,
 		IsInitialize: true,
 	})
 }
@@ -457,13 +510,15 @@ func (f *TForward) forwardImport(fileJob TFileJob, node *TAst) {
 
 		parser := CreateParser(actualPath, string(data))
 		ast := parser.Parse()
-
+		env := CreateEnv(nil)
+		Load(env)
 		childFile := TFileJob{
 			Path:   actualPath,
 			Data:   parser.Tokenizer.Data,
 			Ast:    ast,
-			Env:    CreateEnv(nil),
+			Env:    env,
 			IsDone: true,
+			IsMain: false,
 		}
 		f.pushDelayed(TDelayedImport{
 			SrcFile: fileJob,
@@ -503,13 +558,18 @@ func (f *TForward) forwardImport(fileJob TFileJob, node *TAst) {
 				nameNode.Position,
 			)
 		}
+		// Get the symbol
+		childFile.Env.UpdateSymbolIsUsed(nameNode.Str0, true)
+		// Copy the symbol
 		fileJob.Env.AddSymbol(TSymbol{
 			Name:         nameNode.Str0,
 			NameSpace:    JoinVariableName(GetFileNameWithoutExtension(childFile.Path), nameNode.Str0),
+			Module:       GetFileNameWithoutExtension(childFile.Path),
 			DataType:     childFile.Env.GetSymbol(nameNode.Str0).DataType,
 			Position:     nameNode.Position,
 			IsGlobal:     true,
-			IsConst:      false,
+			IsConst:      true,
+			IsUsed:       true,
 			IsInitialize: false,
 		})
 	}
@@ -551,10 +611,12 @@ func (f *TForward) forwardVar(fileJob TFileJob, node *TAst) {
 		fileJob.Env.AddSymbol(TSymbol{
 			Name:         nameNode.Str0,
 			NameSpace:    JoinVariableName(GetFileNameWithoutExtension(fileJob.Path), nameNode.Str0),
+			Module:       GetFileNameWithoutExtension(fileJob.Path),
 			DataType:     dataType,
 			Position:     nameNode.Position,
 			IsGlobal:     true,
 			IsConst:      false,
+			IsUsed:       false,
 			IsInitialize: valuNode != nil,
 		})
 	}
@@ -596,10 +658,12 @@ func (f *TForward) forwardConst(fileJob TFileJob, node *TAst) {
 		fileJob.Env.AddSymbol(TSymbol{
 			Name:         nameNode.Str0,
 			NameSpace:    JoinVariableName(GetFileNameWithoutExtension(fileJob.Path), nameNode.Str0),
+			Module:       GetFileNameWithoutExtension(fileJob.Path),
 			DataType:     dataType,
 			Position:     nameNode.Position,
 			IsGlobal:     true,
 			IsConst:      true,
+			IsUsed:       false,
 			IsInitialize: valuNode != nil,
 		})
 	}
@@ -691,21 +755,23 @@ func ForwardDeclairation(state *TState, path string, data []rune, ast *TAst) []T
 	forward.State = state
 	forward.Files = make([]TFileJob, 0)
 	forward.MissingTypes = make([]TMissingTypeJob, 0)
-
+	env := CreateEnv(nil)
+	Load(env)
 	job := TFileJob{
 		Path:   path,
 		Data:   data,
 		Ast:    ast,
-		Env:    CreateEnv(nil),
+		Env:    env,
 		IsDone: false,
+		IsMain: true,
 	}
-
+	// Forward the file
 	forward.forward(job)
 	forward.build()
-
-	if !forward.hasFile(path) {
-		forward.pushFile(job)
-	}
-
+	// Make the file unique
+	forward.makeUniqueFile()
+	// Re-imported
+	forward.replaceFile(job)
+	// Return the files
 	return forward.Files
 }

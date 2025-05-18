@@ -38,6 +38,8 @@ const (
 	AstAnd             AstType = iota
 	AstOr              AstType = iota
 	AstXor             AstType = iota
+	AstLogAnd          AstType = iota
+	AstLogOr           AstType = iota
 	AstAssign          AstType = iota
 	AstBindAssign      AstType = iota
 	AstMulAssign       AstType = iota
@@ -226,7 +228,36 @@ func AstBlock(ttype AstType, position TPosition, children []*TAst) *TAst {
 }
 
 func IsConstantValueNode(node *TAst) bool {
-	return node.Ttype == AstInt || node.Ttype == AstNum || node.Ttype == AstStr || node.Ttype == AstBool
+	if node.Ttype == AstInt || node.Ttype == AstNum || node.Ttype == AstStr || node.Ttype == AstBool || node.Ttype == AstNull {
+		return true
+	} else if node.Ttype == AstAdd ||
+		node.Ttype == AstSub ||
+		node.Ttype == AstMul ||
+		node.Ttype == AstDiv ||
+		node.Ttype == AstMod ||
+		node.Ttype == AstShl ||
+		node.Ttype == AstShr ||
+		node.Ttype == AstLt ||
+		node.Ttype == AstLe ||
+		node.Ttype == AstGt ||
+		node.Ttype == AstGe ||
+		node.Ttype == AstEq ||
+		node.Ttype == AstNe ||
+		node.Ttype == AstAnd ||
+		node.Ttype == AstOr ||
+		node.Ttype == AstXor ||
+		node.Ttype == AstLogAnd ||
+		node.Ttype == AstLogOr {
+		return IsConstantValueNode(node.Ast0) && IsConstantValueNode(node.Ast1)
+	} else if node.Ttype == AstArray {
+		for _, child := range node.AstArr0 {
+			if !IsConstantValueNode(child) {
+				return false
+			}
+		}
+		return true
+	}
+	return false
 }
 
 func GetAstTypeByPostfixOp(opt string) AstType {
@@ -236,8 +267,9 @@ func GetAstTypeByPostfixOp(opt string) AstType {
 	case "--":
 		return AstMinus2
 	default:
-		panic("not implemented!")
+		RaiseSystemError("not implemented!")
 	}
+	return -1
 }
 
 func GetAstTypeByUnaryOp(opt string) AstType {
@@ -257,8 +289,9 @@ func GetAstTypeByUnaryOp(opt string) AstType {
 	case keyAwait:
 		return AstAwait
 	default:
-		panic("not implemented!")
+		RaiseSystemError("invalid or not implemented unary operator!")
 	}
+	return -1
 }
 
 func GetAstTypeByBinaryOp(opt string) AstType {
@@ -292,9 +325,9 @@ func GetAstTypeByBinaryOp(opt string) AstType {
 	case "^":
 		return AstXor
 	case "&&":
-		return AstAnd
+		return AstLogAnd
 	case "||":
-		return AstOr
+		return AstLogOr
 	case "=":
 		return AstAssign
 	case ":=":
@@ -320,6 +353,7 @@ func GetAstTypeByBinaryOp(opt string) AstType {
 	case "^=":
 		return AstXorAssign
 	default:
-		panic("not implemented!")
+		RaiseSystemError("invalid or not implemented binary operator!")
 	}
+	return -1
 }
