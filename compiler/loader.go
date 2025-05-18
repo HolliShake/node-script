@@ -2,6 +2,20 @@ package main
 
 import (
 	"dev/types"
+	"strings"
+)
+
+const (
+	MODULE_FMT    = "fmt"
+	MODULE_OS     = "os"
+	MODULE_GLOBAL = ""
+)
+
+const (
+	FMT_PRINTLN   = "Println"
+	FMT_PRINT     = "Print"
+	GLOBAL_APPEND = "append"
+	GLOBAL_PANIC  = "panic"
 )
 
 func Load(env *TEnv) {
@@ -10,27 +24,27 @@ func Load(env *TEnv) {
 	// Define the println function
 	DefineSymbol(
 		env,
-		"println",
-		"fmt.Println",
-		"fmt",
-		types.TFunc(true, []*types.TPair{types.CreatePair("value", types.TAny())}, types.TVoid()),
+		strings.ToLower(FMT_PRINTLN),
+		MODULE_FMT+"."+FMT_PRINTLN,
+		MODULE_FMT,
+		types.TFunc(true, []*types.TPair{types.CreatePair("value", types.TAny())}, types.TVoid(), false),
 	)
 
 	// Define the print function
 	DefineSymbol(
 		env,
-		"print",
-		"fmt.Print",
-		"fmt",
-		types.TFunc(true, []*types.TPair{types.CreatePair("value", types.TAny())}, types.TVoid()),
+		strings.ToLower(FMT_PRINT),
+		MODULE_FMT+"."+FMT_PRINT,
+		MODULE_FMT,
+		types.TFunc(true, []*types.TPair{types.CreatePair("value", types.TAny())}, types.TVoid(), false),
 	)
 
 	// Define the append function
 	DefineSymbol(
 		env,
-		"append",
-		"append",
-		"",
+		strings.ToLower(GLOBAL_APPEND),
+		GLOBAL_APPEND,
+		MODULE_GLOBAL,
 		types.TFunc(
 			true,
 			[]*types.TPair{
@@ -38,15 +52,16 @@ func Load(env *TEnv) {
 				types.CreatePair("value", types.TAny()),
 			},
 			types.TArray(types.TAny()),
+			false,
 		),
 	)
 
 	// Define the panic function
 	DefineSymbol(
 		env,
-		"panic",
-		"panic",
-		"",
-		types.TFunc(true, []*types.TPair{types.CreatePair("value", types.TAny())}, types.TVoid()),
+		strings.ToLower(GLOBAL_PANIC),
+		GLOBAL_PANIC,
+		MODULE_GLOBAL,
+		types.TFunc(true, []*types.TPair{types.CreatePair("value", types.TAny())}, types.TVoid(), true),
 	)
 }

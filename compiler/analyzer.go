@@ -69,7 +69,7 @@ func (analyzer *TAnalyzer) writePosition(position TPosition) {
 func (analyzer *TAnalyzer) getType(node *TAst) *types.TTyping {
 	switch node.Ttype {
 	case AstIDN:
-		if analyzer.file.Env.HasLocalSymbol(node.Str0) {
+		if analyzer.file.Env.HasGlobalSymbol(node.Str0) {
 			symbol := analyzer.file.Env.GetSymbol(node.Str0)
 			analyzer.file.Env.UpdateSymbolIsUsed(node.Str0, true)
 			return symbol.DataType
@@ -311,6 +311,27 @@ func (analyzer *TAnalyzer) expression(node *TAst) {
 				analyzer.file.Path,
 				analyzer.file.Data,
 				fmt.Sprintf("cannot call %s", objectValue.DataType.ToString()),
+				objectNode.Position,
+			)
+		}
+		if objectValue.DataType.Panics() && analyzer.scope.InFunction() {
+			current := analyzer.scope
+			for current.Type != ScopeFunction {
+				current = current.Parent
+			}
+			if current.Type == ScopeFunction && !current.Panics {
+				RaiseLanguageCompileError(
+					analyzer.file.Path,
+					analyzer.file.Data,
+					fmt.Sprintf("cannot call function '%s' that may panic from a function that does not declare 'panics'", objectValue.DataType.ToString()),
+					objectNode.Position,
+				)
+			}
+		} else if objectValue.DataType.Panics() && analyzer.scope.InGlobal() {
+			RaiseLanguageCompileError(
+				analyzer.file.Path,
+				analyzer.file.Data,
+				"cannot call function that may panic from the global scope",
 				objectNode.Position,
 			)
 		}
@@ -839,6 +860,8 @@ func (analyzer *TAnalyzer) statement(node *TAst) {
 		analyzer.visitConst(node)
 	case AstLocal:
 		analyzer.visitLocal(node)
+	case AstReturnStmnt:
+		analyzer.visitReturn(node)
 	case AstEmptyStmnt:
 		analyzer.write("", false)
 	case AstExpressionStmnt:
@@ -997,11 +1020,12 @@ func (analyzer *TAnalyzer) visitDefine(node *TAst) {
 		)
 	}
 	analyzer.writePosition(node.Position)
-	functionScope := CreateScope(analyzer.scope, ScopeFunction)
+	functionScope := CreateFunctionScope(analyzer.scope, node.Flg0)
 	localScope := CreateScope(functionScope, ScopeLocal)
 	analyzer.scope = functionScope
 	analyzer.scope = localScope
 	isMethod := node.Ttype == AstMethod
+	panics := node.Flg0
 	nameNode := node.Ast0
 	returnTypeNode := node.Ast1
 	paramNamesNode := node.AstArr0
@@ -1090,7 +1114,7 @@ func (analyzer *TAnalyzer) visitDefine(node *TAst) {
 		parametersTypesPair = append(parametersTypesPair, types.CreatePair(paramNameNode.Str0, parameterType))
 		analyzer.write(fmt.Sprintf("%s %s", paramNameNode.Str0, parameterType.ToGoType()), false)
 		if index < len(paramNamesNode)-1 {
-			analyzer.srcNl()
+			analyzer.write(", ", false)
 		}
 		if analyzer.scope.Env.HasLocalSymbol(paramNameNode.Str0) {
 			RaiseLanguageCompileError(
@@ -1133,6 +1157,13 @@ func (analyzer *TAnalyzer) visitDefine(node *TAst) {
 		analyzer.write("return", false)
 		analyzer.write(" ", false)
 		analyzer.write(returnType.DefaultValue(), false)
+	} else if !types.CanStore(returnType, functionScope.Return) {
+		RaiseLanguageCompileError(
+			analyzer.file.Path,
+			analyzer.file.Data,
+			fmt.Sprintf("cannot return %s, return type must be %s", functionScope.Return.ToGoType(), returnType.ToGoType()),
+			node.Position,
+		)
 	}
 	analyzer.decTb()
 	analyzer.srcNl()
@@ -1156,6 +1187,7 @@ func (analyzer *TAnalyzer) visitDefine(node *TAst) {
 				false,
 				parametersTypesPair,
 				returnType,
+				panics,
 			),
 		)
 	}
@@ -1609,6 +1641,33 @@ func (analyzer *TAnalyzer) visitLocal(node *TAst) {
 	analyzer.write(")", false)
 }
 
+func (analyzer *TAnalyzer) visitReturn(node *TAst) {
+	if !analyzer.scope.InFunction() {
+		RaiseLanguageCompileError(
+			analyzer.file.Path,
+			analyzer.file.Data,
+			"return statement is not allowed here",
+			node.Position,
+		)
+	}
+	// Capture the function
+	currentScope := analyzer.scope
+	for currentScope.Type != ScopeFunction {
+		currentScope = currentScope.Parent
+	}
+	// Return statement
+	exprNode := node.Ast0
+	analyzer.srcTb()
+	analyzer.write("return", false)
+	if exprNode != nil {
+		analyzer.srcSp()
+		analyzer.expression(exprNode)
+		currentScope.Return = analyzer.stack.Pop().DataType
+	} else {
+		currentScope.Return = types.TVoid()
+	}
+}
+
 func (analyzer *TAnalyzer) program(node *TAst) {
 	// Create a new environment for the built-in functions.
 	builtInEnv := CreateEnv(nil)
@@ -1646,7 +1705,7 @@ func (analyzer *TAnalyzer) program(node *TAst) {
 	// Create a new scope for the global variables.
 	globalScope := &TScope{
 		Parent: nil,
-		Env:    builtInEnv,
+		Env:    analyzer.file.Env,
 		Type:   ScopeGlobal,
 		Return: nil,
 	}

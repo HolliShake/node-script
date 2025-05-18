@@ -65,6 +65,11 @@ type TTyping struct {
 	members   []*TPair   // Struct attribute | Function parameter
 	methods   []*TPair   // Type methods
 	variadic  bool       // Function variadic
+	panics    bool       // Function panics
+}
+
+func (t *TTyping) Panics() bool {
+	return t.panics
 }
 
 func (t *TTyping) GetInternal0() *TTyping {
@@ -184,7 +189,16 @@ func (t *TTyping) ToString() string {
 		}
 		return "(" + strings.Join(elements, ",") + ")"
 	case TypeFunc:
-		panic("invalid type or not implemented")
+		parameters := make([]string, len(t.members))
+		for i, parameter := range t.members {
+			parameters[i] = parameter.DataType.ToString()
+		}
+		returnType := t.internal0.ToString()
+		str := fmt.Sprintf("func(%s) %s", strings.Join(parameters, ","), returnType)
+		if t.panics {
+			str = str + " panics"
+		}
+		return str
 	default:
 		panic("invalid type or not implemented")
 	}
@@ -292,11 +306,12 @@ func TStruct(name string, attributes []*TPair) *TTyping {
 	return typing
 }
 
-func TFunc(variadic bool, attributes []*TPair, returnType *TTyping) *TTyping {
+func TFunc(variadic bool, attributes []*TPair, returnType *TTyping, panics bool) *TTyping {
 	typing := CreateTyping("func{}", TypeFunc)
 	typing.internal0 = returnType
 	typing.members = attributes
 	typing.variadic = variadic
+	typing.panics = panics
 	return typing
 }
 

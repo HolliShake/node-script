@@ -929,6 +929,10 @@ func (parser *TParser) defineDecl() *TAst {
 	}
 	parser.acceptV(")")
 	returnTypeAst := parser.typing()
+	panics := parser.matchV(KeyPanics)
+	if panics {
+		parser.acceptV(KeyPanics)
+	}
 	parser.acceptV("{")
 	children := make([]*TAst, 0)
 	childN := parser.statement()
@@ -950,6 +954,7 @@ func (parser *TParser) defineDecl() *TAst {
 		names,
 		types,
 		children,
+		panics,
 	)
 }
 

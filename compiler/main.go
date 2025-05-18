@@ -49,6 +49,7 @@ func main() {
 	}
 	// Collect and free the memory.
 	CollectAndFree()
+
 	// Run the Go program.
 	out, err := goBinding.GoRunCache()
 	if err != nil {

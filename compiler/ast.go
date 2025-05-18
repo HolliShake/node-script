@@ -90,6 +90,7 @@ type TAst struct {
 	Ttype    AstType
 	Position TPosition
 	Str0     string
+	Flg0     bool
 	Ast0     *TAst
 	Ast1     *TAst
 	Ast2     *TAst
@@ -194,8 +195,9 @@ func AstStructDec(ttype AstType, position TPosition, name *TAst, fieldNames []*T
 	return ast
 }
 
-func AstDefineDec(ttype AstType, position TPosition, name *TAst, returnType *TAst, paramNames []*TAst, paramTypes []*TAst, children []*TAst) *TAst {
+func AstDefineDec(ttype AstType, position TPosition, name *TAst, returnType *TAst, paramNames []*TAst, paramTypes []*TAst, children []*TAst, panics bool) *TAst {
 	ast := CreateAst(ttype, position)
+	ast.Flg0 = panics
 	ast.Ast0 = name
 	ast.Ast1 = returnType
 	ast.AstArr0 = paramNames

@@ -17,6 +17,7 @@ type TScope struct {
 	Parent *TScope
 	Type   TScopeType
 	Env    *TEnv
+	Panics bool
 	Return *types.TTyping
 }
 
@@ -29,6 +30,20 @@ func CreateScope(parent *TScope, scopeType TScopeType) *TScope {
 	} else {
 		scope.Env = CreateEnv(nil)
 	}
+	scope.Return = nil
+	return scope
+}
+
+func CreateFunctionScope(parent *TScope, panics bool) *TScope {
+	scope := new(TScope)
+	scope.Parent = parent
+	scope.Type = ScopeFunction
+	if parent != nil {
+		scope.Env = CreateEnv(parent.Env)
+	} else {
+		scope.Env = CreateEnv(nil)
+	}
+	scope.Panics = panics
 	scope.Return = nil
 	return scope
 }
@@ -52,6 +67,17 @@ func (scope *TScope) InStruct() bool {
 	current := scope
 	for current != nil {
 		if current.Type == ScopeStruct {
+			return true
+		}
+		current = current.Parent
+	}
+	return false
+}
+
+func (scope *TScope) InFunction() bool {
+	current := scope
+	for current != nil {
+		if current.Type == ScopeFunction {
 			return true
 		}
 		current = current.Parent

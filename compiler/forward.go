@@ -369,6 +369,7 @@ func (f *TForward) forwardStruct(fileJob TFileJob, node *TAst) {
 
 func (f *TForward) forwardDefine(fileJob TFileJob, node *TAst, error bool) {
 	newEnv := CreateEnv(fileJob.Env)
+	panics := node.Flg0
 	nameNode := node.Ast0
 	returnTypeNode := node.Ast1
 	paramNamesNode := node.AstArr0
@@ -456,7 +457,7 @@ func (f *TForward) forwardDefine(fileJob TFileJob, node *TAst, error bool) {
 		Name:         nameNode.Str0,
 		NameSpace:    JoinVariableName(GetFileNameWithoutExtension(fileJob.Path), nameNode.Str0),
 		Module:       GetFileNameWithoutExtension(fileJob.Path),
-		DataType:     types.TFunc(false, parameters, returnType),
+		DataType:     types.TFunc(false, parameters, returnType, panics),
 		Position:     node.Position,
 		IsGlobal:     true,
 		IsConst:      true,
@@ -511,7 +512,6 @@ func (f *TForward) forwardImport(fileJob TFileJob, node *TAst) {
 		parser := CreateParser(actualPath, string(data))
 		ast := parser.Parse()
 		env := CreateEnv(nil)
-		Load(env)
 		childFile := TFileJob{
 			Path:   actualPath,
 			Data:   parser.Tokenizer.Data,
@@ -756,7 +756,6 @@ func ForwardDeclairation(state *TState, path string, data []rune, ast *TAst) []T
 	forward.Files = make([]TFileJob, 0)
 	forward.MissingTypes = make([]TMissingTypeJob, 0)
 	env := CreateEnv(nil)
-	Load(env)
 	job := TFileJob{
 		Path:   path,
 		Data:   data,

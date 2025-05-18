@@ -15,13 +15,31 @@ struct King {
     Pet  Dog;
 }
 
-define (p Person) GetPet() Dog {
+define (p Person) GetPet() void panics {
 
 }
 
 const Kill str = "adadaasdas";
 
-define main(args [str]) i32 {
+define add(a i32, b i32) i32 panics {
+    
+    return a + b;
+}
+
+define justCall() void {
+    add(10, 20);
+}
+
+define main(args [str]) i32 panics {
     local g num = 1000 + 20.2;
-    println("Hello, World!", g, args, 0xff);
+    a, b, c := 1,2,3;
+    println(
+        "Hello, World!",
+        args,
+        0xff,
+        a,b,c,g
+    );
+    add(10, 20);
+    justCall();
+    return 100;
 }
