@@ -308,6 +308,10 @@ func GetAstTypeByBinaryOp(opt string) AstType {
 		return AstAdd
 	case "-":
 		return AstSub
+	case "<<":
+		return AstShl
+	case ">>":
+		return AstShr
 	case "<":
 		return AstLt
 	case "<=":

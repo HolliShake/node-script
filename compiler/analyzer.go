@@ -327,6 +327,7 @@ func (analyzer *TAnalyzer) expression(node *TAst) {
 					objectNode.Position,
 				)
 			}
+			current.HasPanic = true
 		} else if objectValue.DataType.Panics() && analyzer.scope.InGlobal() {
 			RaiseLanguageCompileError(
 				analyzer.file.Path,
@@ -1162,6 +1163,14 @@ func (analyzer *TAnalyzer) visitDefine(node *TAst) {
 			analyzer.file.Path,
 			analyzer.file.Data,
 			fmt.Sprintf("cannot return %s, return type must be %s", functionScope.Return.ToGoType(), returnType.ToGoType()),
+			node.Position,
+		)
+	}
+	if functionScope.Panics && !functionScope.HasPanic {
+		RaiseLanguageCompileError(
+			analyzer.file.Path,
+			analyzer.file.Data,
+			"function declared to panic, but it does not actually panic",
 			node.Position,
 		)
 	}

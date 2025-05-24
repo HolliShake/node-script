@@ -19,6 +19,9 @@ var capitalCaseRegex = regexp.MustCompile(`^[A-Z][A-Z0-9]*$`)
 
 var isFunctionCallRegex = regexp.MustCompile(`^[a-zA-Z0-9_]+\([^\)]*\)$`)
 
+// Private attributes is nag start with double underscore and not end with underscore, like python
+var isPrivateAttributeRegex = regexp.MustCompile(`^__[a-z][a-z0-9]*(?:_[a-z][a-z0-9]*)*$`)
+
 func IsPascalCase(s string) bool {
 	return pascalCaseRegex.MatchString(s)
 }
@@ -37,6 +40,10 @@ func IsCapitalCase(s string) bool {
 
 func IsFunctionCall(s string) bool {
 	return isFunctionCallRegex.MatchString(s)
+}
+
+func IsPrivateAttribute(s string) bool {
+	return isPrivateAttributeRegex.MatchString(s)
 }
 
 func ToPascalCase(s string) string {

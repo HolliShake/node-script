@@ -14,11 +14,12 @@ const (
 )
 
 type TScope struct {
-	Parent *TScope
-	Type   TScopeType
-	Env    *TEnv
-	Panics bool
-	Return *types.TTyping
+	Parent   *TScope
+	Type     TScopeType
+	Env      *TEnv
+	Panics   bool
+	HasPanic bool
+	Return   *types.TTyping
 }
 
 func CreateScope(parent *TScope, scopeType TScopeType) *TScope {
@@ -44,6 +45,7 @@ func CreateFunctionScope(parent *TScope, panics bool) *TScope {
 		scope.Env = CreateEnv(nil)
 	}
 	scope.Panics = panics
+	scope.HasPanic = false
 	scope.Return = nil
 	return scope
 }
