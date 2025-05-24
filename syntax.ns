@@ -17,8 +17,6 @@ struct King {
 
 define (p Person) GetPet() void panics {
     panic("error:nah!!");
-
-   
 }
 
 const Kill str = "adadaasdas";
@@ -41,6 +39,5 @@ define main(args [str]) i32 {
         0xff,
         a,b,c,g
     );
-  
     return 100;
 }
