@@ -1,6 +1,5 @@
 import ( Dog ) from "./test.ns";
 
-
 var DATA i32 = 100, TYPE str = "true", PascalTest i8 = 10;
 
 struct Person {
@@ -27,7 +26,12 @@ define add(a i32, b i32) i32 panics {
 }
 
 define justCall() void panics {
-    add(10, 20);
+    println(add(10, 20));
+}
+
+define toNewThread() i32 {
+    println("Hello World From new Thread!!");
+    return 1;
 }
 
 define main(args [str]) i32 {
@@ -39,5 +43,10 @@ define main(args [str]) i32 {
         0xff,
         a,b,c,g
     );
+
+    v := 2 << 2;
+    println(v);
+    const arr [i32] = [1,2,3];
+    println(arr);
     return 100;
 }

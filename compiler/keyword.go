@@ -17,8 +17,9 @@ const (
 	KeySwitch   = "switch"
 	KeyCase     = "case"
 	KeyDefault  = "default"
-	KeyBreak    = "break"
+	KeyRun      = "run"
 	KeyContinue = "continue"
+	KeyBreak    = "break"
 	KeyReturn   = "return"
 	KeyPanics   = "panics"
 	KeyTrue     = "true"
@@ -51,8 +52,9 @@ var Keywords = []string{
 	KeySwitch,
 	KeyCase,
 	KeyDefault,
-	KeyBreak,
+	KeyRun,
 	KeyContinue,
+	KeyBreak,
 	KeyReturn,
 	KeyPanics,
 	KeyTrue,

@@ -273,7 +273,7 @@ func (analyzer *TAnalyzer) expression(node *TAst) {
 		analyzer.write("[]", false)
 		analyzer.write(elementType.ToGoType(), false)
 		analyzer.write(", ", false)
-		analyzer.write(strconv.Itoa(len(elementsNode)), false)
+		analyzer.write("0", false)
 		analyzer.write(")", false)
 		analyzer.write(", ", false)
 		for index, childNode := range elementsNode {
@@ -337,6 +337,7 @@ func (analyzer *TAnalyzer) expression(node *TAst) {
 			)
 		}
 		analyzer.write("(", false)
+		// TODO: Check parameter type is valid.
 		for index, childNode := range parametersNode {
 			analyzer.expression(childNode)
 			if index < len(parametersNode)-1 {
@@ -344,6 +345,10 @@ func (analyzer *TAnalyzer) expression(node *TAst) {
 			}
 		}
 		analyzer.write(")", false)
+		analyzer.stack.Push(CreateValue(
+			objectValue.DataType.GetReturnType(),
+			nil,
+		))
 	case AstMul:
 		lhsNode := node.Ast0
 		rhsNode := node.Ast1
@@ -861,6 +866,8 @@ func (analyzer *TAnalyzer) statement(node *TAst) {
 		analyzer.visitConst(node)
 	case AstLocal:
 		analyzer.visitLocal(node)
+	case AstRunStmnt:
+		analyzer.visitRunStmnt(node)
 	case AstReturnStmnt:
 		analyzer.visitReturn(node)
 	case AstEmptyStmnt:
@@ -875,8 +882,12 @@ func (analyzer *TAnalyzer) statement(node *TAst) {
 				node.Position,
 			)
 		}
+		analyzer.writePosition(node.Position)
+		analyzer.srcTb()
+		analyzer.expression(node.Ast0)
+		value := analyzer.stack.Pop()
 		// Prevent standalone identifiers and constants that have no effect
-		if node.Ast0.Ttype == AstIDN || IsConstantValueNode(node.Ast0) {
+		if (node.Ast0.Ttype == AstIDN || node.Ast0.Ttype == AstCall || IsConstantValueNode(node.Ast0)) && !types.IsVoid(value.DataType) {
 			RaiseLanguageCompileError(
 				analyzer.file.Path,
 				analyzer.file.Data,
@@ -884,9 +895,6 @@ func (analyzer *TAnalyzer) statement(node *TAst) {
 				node.Position,
 			)
 		}
-		analyzer.writePosition(node.Position)
-		analyzer.srcTb()
-		analyzer.expression(node.Ast0)
 	default:
 		RaiseLanguageCompileError(
 			analyzer.file.Path,
@@ -1650,6 +1658,20 @@ func (analyzer *TAnalyzer) visitLocal(node *TAst) {
 	analyzer.write(")", false)
 }
 
+func (analyzer *TAnalyzer) visitRunStmnt(node *TAst) {
+	exprNode := node.Ast0
+	if exprNode.Ttype != AstCall {
+		RaiseLanguageCompileError(
+			analyzer.file.Path,
+			analyzer.file.Data,
+			"invalid run statement, run statement must be a function call",
+			node.Position,
+		)
+	}
+	analyzer.write("go ", false)
+	analyzer.expression(exprNode)
+}
+
 func (analyzer *TAnalyzer) visitReturn(node *TAst) {
 	if !analyzer.scope.InFunction() {
 		RaiseLanguageCompileError(
@@ -1814,5 +1836,13 @@ func (analyzer *TAnalyzer) program(node *TAst) {
 // API:Export
 func (analyzer *TAnalyzer) Analyze() string {
 	analyzer.program(analyzer.file.Ast)
+	if analyzer.stack.Size() != 0 {
+		RaiseLanguageCompileError(
+			analyzer.file.Path,
+			analyzer.file.Data,
+			fmt.Sprintf("evaluation stack is not empty (%d)", analyzer.stack.Size()),
+			analyzer.file.Ast.Position,
+		)
+	}
 	return analyzer.src
 }

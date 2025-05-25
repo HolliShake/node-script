@@ -808,6 +808,8 @@ func (parser *TParser) statement() *TAst {
 		return parser.whileDecl()
 	} else if parser.matchV(KeyIf) {
 		return parser.ifDecl()
+	} else if parser.matchV(KeyRun) {
+		return parser.runStmnt()
 	} else if parser.matchV(KeyContinue) {
 		return parser.continueStmnt()
 	} else if parser.matchV(KeyBreak) {
@@ -1334,6 +1336,19 @@ func (parser *TParser) ifDecl() *TAst {
 		cond,
 		body,
 		elseValue,
+	)
+}
+
+func (parser *TParser) runStmnt() *TAst {
+	start := parser.look.Position
+	ended := start
+	parser.acceptV(KeyRun)
+	expr := parser.mandatoryExpression()
+	parser.acceptV(";")
+	return AstSingle(
+		AstRunStmnt,
+		start.Merge(ended),
+		expr,
 	)
 }
 

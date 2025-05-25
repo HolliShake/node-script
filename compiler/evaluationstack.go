@@ -23,3 +23,7 @@ func (stack *TEvaluationStack) Pop() TValue {
 func (stack *TEvaluationStack) Peek() TValue {
 	return stack.stack[len(stack.stack)-1]
 }
+
+func (stack *TEvaluationStack) Size() int {
+	return len(stack.stack)
+}

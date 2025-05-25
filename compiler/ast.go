@@ -77,6 +77,7 @@ const (
 	AstFor             AstType = iota
 	AstForIf           AstType = iota
 	AstIf              AstType = iota
+	AstRunStmnt        AstType = iota
 	AstContinueStmnt   AstType = iota
 	AstBreakStmnt      AstType = iota
 	AstReturnStmnt     AstType = iota

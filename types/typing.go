@@ -84,6 +84,10 @@ func (t *TTyping) GetElements() []*TTyping {
 	return t.elements
 }
 
+func (t *TTyping) GetReturnType() *TTyping {
+	return t.internal0
+}
+
 func (t *TTyping) HasMember(name string) bool {
 	for _, member := range t.members {
 		if member.Name == name {
