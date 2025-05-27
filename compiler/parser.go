@@ -1374,7 +1374,7 @@ func (parser *TParser) returnStmnt() *TAst {
 	start := parser.look.Position
 	ended := start
 	parser.acceptV(KeyReturn)
-	expr := parser.expression()
+	expr := parser.tupleOrExpression()
 	ended = parser.look.Position
 	parser.acceptV(";")
 	return AstSingle(

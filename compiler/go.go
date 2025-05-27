@@ -2,12 +2,13 @@ package main
 
 import (
 	"errors"
+	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
 )
 
-type TGo struct {
+type TGoBinding struct {
 	// Cache paths to avoid repeated calculations
 	execPathCache  string
 	cachePath      string
@@ -15,11 +16,11 @@ type TGo struct {
 	goFmtPathCache string
 }
 
-func CreateGo() *TGo {
-	return &TGo{}
+func CreateGo() *TGoBinding {
+	return &TGoBinding{}
 }
 
-func (g *TGo) getExecPath() (string, error) {
+func (g *TGoBinding) getExecPath() (string, error) {
 	// Return cached path if available
 	if g.execPathCache != "" {
 		return g.execPathCache, nil
@@ -42,7 +43,7 @@ func (g *TGo) getExecPath() (string, error) {
 	return actualPath, nil
 }
 
-func (g *TGo) getCachePath() (string, error) {
+func (g *TGoBinding) getCachePath() (string, error) {
 	// Return cached path if available
 	if g.cachePath != "" {
 		return g.cachePath, nil
@@ -60,7 +61,7 @@ func (g *TGo) getCachePath() (string, error) {
 }
 
 // API:Export
-func (g *TGo) GetGo() (string, error) {
+func (g *TGoBinding) GetGo() (string, error) {
 	// Return cached path if available
 	if g.goPathCache != "" {
 		return g.goPathCache, nil
@@ -88,7 +89,7 @@ func (g *TGo) GetGo() (string, error) {
 }
 
 // API:Export
-func (g *TGo) GetGoFmt() (string, error) {
+func (g *TGoBinding) GetGoFmt() (string, error) {
 	// Return cached path if available
 	if g.goFmtPathCache != "" {
 		return g.goFmtPathCache, nil
@@ -116,7 +117,7 @@ func (g *TGo) GetGoFmt() (string, error) {
 }
 
 // API:Export
-func (g *TGo) InitGoModToCache() (bool, error) {
+func (g *TGoBinding) InitGoModToCache() (bool, error) {
 	goPath, err := g.GetGo()
 	if err != nil {
 		return false, err
@@ -150,7 +151,7 @@ func (g *TGo) InitGoModToCache() (bool, error) {
 }
 
 // API:Export
-func (g *TGo) GoExecFmt(file string) (bool, error) {
+func (g *TGoBinding) GoExecFmt(file string) (bool, error) {
 	goPath, err := g.GetGoFmt()
 	if err != nil {
 		return false, err
@@ -171,7 +172,7 @@ func (g *TGo) GoExecFmt(file string) (bool, error) {
 }
 
 // API:Export
-func (g *TGo) GoRunCache() (string, error) {
+func (g *TGoBinding) GoRunCache() (string, error) {
 	goPath, err := g.GetGo()
 	if err != nil {
 		return "", err
@@ -192,7 +193,7 @@ func (g *TGo) GoRunCache() (string, error) {
 }
 
 // API:Export
-func (g *TGo) GoRunCompileCache() (bool, error) {
+func (g *TGoBinding) GoCompileCache(scriptPath string, output string) (bool, error) {
 	goPath, err := g.GetGo()
 	if err != nil {
 		return false, err
@@ -202,8 +203,8 @@ func (g *TGo) GoRunCompileCache() (bool, error) {
 		return false, err
 	}
 
-	cmd := exec.Command(goPath, "build", "-o", "main.exe", cachePath)
-	cmd.Dir = cachePath
+	cmd := exec.Command(goPath, "build", "-o", fmt.Sprintf("%s.exe", output), cachePath)
+	cmd.Dir = scriptPath
 
 	_, err = cmd.CombinedOutput()
 	if err != nil {
@@ -213,7 +214,7 @@ func (g *TGo) GoRunCompileCache() (bool, error) {
 }
 
 // API:Export
-func (g *TGo) Generate(file string, data string) (bool, error) {
+func (g *TGoBinding) Generate(file string, data string) (bool, error) {
 	cachePath, err := g.getCachePath()
 	if err != nil {
 		return false, err

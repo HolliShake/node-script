@@ -242,7 +242,9 @@ func (analyzer *TAnalyzer) expression(node *TAst) {
 		))
 	case AstArray:
 		saveSrc := analyzer.src
+		saveStack := analyzer.stack
 		analyzer.src = ""
+		analyzer.stack = CreateEvaluationStack()
 		elementsNode := node.AstArr0
 		var elementType *types.TTyping = nil // Default type.
 		for index, childNode := range elementsNode {
@@ -265,7 +267,9 @@ func (analyzer *TAnalyzer) expression(node *TAst) {
 				analyzer.write(", ", false)
 			}
 		}
+		// Restore
 		analyzer.src = saveSrc
+		analyzer.stack = saveStack
 		analyzer.write("append", false)
 		analyzer.write("(", false)
 		analyzer.write("make", false)
@@ -278,6 +282,15 @@ func (analyzer *TAnalyzer) expression(node *TAst) {
 		analyzer.write(", ", false)
 		for index, childNode := range elementsNode {
 			analyzer.expression(childNode)
+			actualType := analyzer.stack.Pop().DataType
+			if !types.CanStore(elementType, actualType) {
+				RaiseLanguageCompileError(
+					analyzer.file.Path,
+					analyzer.file.Data,
+					fmt.Sprintf("cannot store %s in array of [%s]", actualType.ToString(), elementType.ToString()),
+					childNode.Position,
+				)
+			}
 			if index < len(elementsNode)-1 {
 				analyzer.write(", ", false)
 			}
@@ -338,12 +351,57 @@ func (analyzer *TAnalyzer) expression(node *TAst) {
 		}
 		analyzer.write("(", false)
 		// TODO: Check parameter type is valid.
-		for index, childNode := range parametersNode {
-			analyzer.expression(childNode)
-			if index < len(parametersNode)-1 {
-				analyzer.write(", ", false)
-			}
+		requiredParameters := objectValue.DataType.GetMembers()
+		if objectValue.DataType.Variadic() {
+			requiredParameters = requiredParameters[:len(requiredParameters)-1]
 		}
+		if !objectValue.DataType.Variadic() && len(requiredParameters) == len(parametersNode) {
+			for index, childNode := range parametersNode {
+				requiredType := requiredParameters[index].DataType
+				analyzer.expression(childNode)
+				actualType := analyzer.stack.Pop().DataType
+				if !types.CanStore(requiredType, actualType) {
+					RaiseLanguageCompileError(
+						analyzer.file.Path,
+						analyzer.file.Data,
+						fmt.Sprintf("expected %s, got %s", requiredType.ToString(), actualType.ToString()),
+						childNode.Position,
+					)
+				}
+				if index < len(parametersNode)-1 {
+					analyzer.write(", ", false)
+				}
+			}
+		} else if objectValue.DataType.Variadic() && len(requiredParameters) < len(parametersNode) {
+			for index, childNode := range parametersNode {
+				analyzer.expression(childNode)
+				if index < len(requiredParameters) {
+					requiredType := requiredParameters[index].DataType
+					actualType := analyzer.stack.Pop().DataType
+					if !types.CanStore(requiredType, actualType) {
+						RaiseLanguageCompileError(
+							analyzer.file.Path,
+							analyzer.file.Data,
+							fmt.Sprintf("expected %s, got %s", requiredType.ToString(), actualType.ToString()),
+							childNode.Position,
+						)
+					}
+				} else {
+					analyzer.stack.Pop()
+				}
+				if index < len(parametersNode)-1 {
+					analyzer.write(", ", false)
+				}
+			}
+		} else {
+			RaiseLanguageCompileError(
+				analyzer.file.Path,
+				analyzer.file.Data,
+				fmt.Sprintf("expected %d parameters, got %d", len(requiredParameters), len(parametersNode)),
+				objectNode.Position,
+			)
+		}
+
 		analyzer.write(")", false)
 		analyzer.stack.Push(CreateValue(
 			objectValue.DataType.GetReturnType(),
@@ -841,6 +899,10 @@ func (analyzer *TAnalyzer) expression(node *TAst) {
 				})
 			}
 		}
+		analyzer.stack.Push(CreateValue(
+			nil,
+			nil,
+		))
 	default:
 		RaiseLanguageCompileError(
 			analyzer.file.Path,
@@ -1837,10 +1899,14 @@ func (analyzer *TAnalyzer) program(node *TAst) {
 func (analyzer *TAnalyzer) Analyze() string {
 	analyzer.program(analyzer.file.Ast)
 	if analyzer.stack.Size() != 0 {
+		repr := ""
+		for _, value := range analyzer.stack.stack {
+			repr = repr + value.DataType.ToString() + ", "
+		}
 		RaiseLanguageCompileError(
 			analyzer.file.Path,
 			analyzer.file.Data,
-			fmt.Sprintf("evaluation stack is not empty (%d)", analyzer.stack.Size()),
+			fmt.Sprintf("evaluation stack is not empty (%s)", repr),
 			analyzer.file.Ast.Position,
 		)
 	}

@@ -36,7 +36,7 @@ define toNewThread() i32 {
 
 define main(args [str]) i32 {
     local g num = 1000 + 20.2;
-    a, b, c := 1,2,3;
+    a, b, c := 1,2,1000;
     println(
         "Hello, World!",
         args,
@@ -46,7 +46,8 @@ define main(args [str]) i32 {
 
     v := 2 << 2;
     println(v);
-    const arr [i32] = [1,2,3];
-    println(arr);
+    const arr [i32] = [1,2,3000];
+    arr2 := append(arr, 1, 2, 3);
+    println(arr, arr2);
     return 100;
 }

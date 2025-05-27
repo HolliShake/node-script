@@ -72,6 +72,10 @@ func (t *TTyping) Panics() bool {
 	return t.panics
 }
 
+func (t *TTyping) Variadic() bool {
+	return t.variadic
+}
+
 func (t *TTyping) GetInternal0() *TTyping {
 	return t.internal0
 }

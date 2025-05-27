@@ -5,90 +5,136 @@ import (
 	"os"
 )
 
+const (
+	FLAG_COMPILE = "compile"
+	FLAG_OUT     = "out"
+	FLAG_RUN     = "run"
+)
+
 func parseArgs() map[string]string {
 	args := os.Args[1:]
 	result := make(map[string]string)
 	for i := 0; i < len(args); i++ {
 		arg := args[i]
-		if len(arg) > 0 && arg[0] == '-' {
-			var key string
-			if len(arg) > 1 && arg[1] == '-' {
-				// Handle --flag format
-				key = arg[2:]
-			} else {
-				// Handle -flag format
-				key = arg[1:]
-			}
+		if len(arg) == 0 || arg[0] != '-' {
+			continue
+		}
 
-			// Skip empty keys
-			if key == "" {
-				continue
-			}
+		// Get key (strip leading dashes)
+		var key string
+		if arg[1] == '-' {
+			key = arg[2:] // --flag format
+		} else {
+			key = arg[1:] // -flag format
+		}
 
-			// Check if there's a value following this flag
-			if i+1 < len(args) && (len(args[i+1]) == 0 || args[i+1][0] != '-') {
-				result[key] = args[i+1]
-				i++ // Skip the value in the next iteration
-			} else {
-				// Flag without value, set it to "true"
-				result[key] = "true"
-			}
+		if key == "" {
+			continue
+		}
+
+		// Check if there's a value following this flag
+		if i+1 < len(args) && (len(args[i+1]) == 0 || args[i+1][0] != '-') {
+			result[key] = args[i+1]
+			i++ // Skip the value in the next iteration
+		} else {
+			result[key] = "true" // Flag without value
 		}
 	}
 	return result
 }
 
-func main() {
-	// This is a simple Go program that does nothing.
-	// You can add your code here to implement the desired functionality.
-	goBinding := CreateGo()
+func showHelp() {
+	fmt.Println("Parrot Script")
+	fmt.Println("Author: Philipp Andrew Roa Redondo")
+	fmt.Println("License: GNU GENERAL PUBLIC LICENSE V3")
+	fmt.Println("Available options:")
+	fmt.Println("  --compile <file>  Compile the specified file")
+	fmt.Println("  --out     <file>  Specify the output file for compilation")
+	fmt.Println("  --run     <file>  Run the specified file")
+	fmt.Println("\nExamples:")
+	fmt.Println("  To compile:  parrot --compile myfile.ns --out output")
+	fmt.Println("  To run:      parrot --run myfile.ns")
+}
 
-	fmt.Println(parseArgs())
+func processArgs(goBinding *TGoBinding, args map[string]string) {
+	if compileFile := args[FLAG_COMPILE]; compileFile != "true" && compileFile != "" {
+		output := args[FLAG_OUT]
+		if output == "true" || output == "" {
+			RaiseSystemError("error compiling, output file is not specified")
+		}
+		compile(goBinding, compileFile, output)
+	} else if runFile := args[FLAG_RUN]; runFile != "true" && runFile != "" {
+		run(goBinding, runFile)
+	} else {
+		showHelp()
+	}
+}
 
-	// Read the syntax.ns file.
-	path := ToAbsolutePath("./library/syntax.ns")
-	data, err := os.ReadFile(path)
-
+func processFile(goBinding *TGoBinding, path string) {
+	// Read the file
+	absPath := ToAbsolutePath(path)
+	data, err := os.ReadFile(absPath)
 	if err != nil {
-		RaiseSystemError(fmt.Sprintf("error reading file %s", path))
+		RaiseSystemError(fmt.Sprintf("error reading file %s", absPath))
 	}
 
-	// Create the state.
+	// Create the state
 	tstate := CreateState()
 
-	// Parse the syntax.ns file.
-	parser := CreateParser(path, string(data))
+	// Parse the file
+	parser := CreateParser(absPath, string(data))
 	ast := parser.Parse()
 
-	// Forward declaration.
-	files := ForwardDeclairation(tstate, path, parser.Tokenizer.Data, ast)
+	// Forward declaration
+	files := ForwardDeclairation(tstate, absPath, parser.Tokenizer.Data, ast)
 	tstate.SetFile(files)
 
-	// Initialize the Go module.
+	// Initialize Go module
 	_, modInitErr := goBinding.InitGoModToCache()
 	if modInitErr != nil {
-		RaiseSystemError(string(modInitErr.Error()))
+		RaiseSystemError(modInitErr.Error())
 	}
 
-	// Analyze the syntax.ns file.
+	// Analyze the files
 	for _, file := range files {
 		analyzer := CreateAnalyzer(tstate, file)
 		src := analyzer.Analyze()
 		ok, err := goBinding.Generate(GetFileNameWithoutExtension(file.Path)+".go", src)
-		if err != nil {
-			RaiseSystemError(fmt.Sprintf("error generating file %s", path))
-		}
-		if !ok {
-			RaiseSystemError(fmt.Sprintf("error generating file %s", path))
+		if err != nil || !ok {
+			RaiseSystemError(fmt.Sprintf("error generating file %s", file.Path))
 		}
 	}
-	// Collect and free the memory.
-	CollectAndFree()
 
-	// Run the Go program.
+	// Collect and free memory
+	CollectAndFree()
+}
+
+func compile(goBinding *TGoBinding, scriptPath string, output string) {
+	processFile(goBinding, scriptPath)
+
+	// Compile the cache
+	ok, err := goBinding.GoCompileCache(GetDir(ToAbsolutePath(scriptPath)), output)
+	if err != nil {
+		RaiseSystemError(fmt.Sprintf("error compiling cache: %s", err))
+	}
+	if !ok {
+		RaiseSystemError("error compiling cache")
+	}
+	fmt.Println("compiled cache")
+}
+
+func run(goBinding *TGoBinding, scriptPath string) {
+	processFile(goBinding, scriptPath)
+
+	// Run the cache
 	out, err := goBinding.GoRunCache()
 	if err != nil {
 		RaiseSystemError(fmt.Sprintf("error running Go program: %s", err))
 	}
 	fmt.Print(out)
+}
+
+func main() {
+	// Parse and process arguments
+	processArgs(CreateGo(), parseArgs())
 }

@@ -12,8 +12,12 @@ var PADDING = 3
 
 func RaiseSystemError(message any) {
 	_, fileName, line, _ := runtime.Caller(1)
-	err := fmt.Errorf("DEBUG(%s:%d) | [ERROR] %s", fileName, line, fmt.Sprint(message))
-	panic(err)
+	err := fmt.Sprintf("DEBUG(%s:%d) | [ERROR] %s", fileName, line, fmt.Sprint(message))
+	fmt.Fprint(os.Stderr, err)
+	// Collect and free the memory
+	CollectAndFree()
+	// Exit the program
+	os.Exit(1)
 }
 
 func RaiseLanguageCompileError(file string, data []rune, message string, position TPosition) {
