@@ -71,6 +71,24 @@ func IsTuple(ttype *TTyping) bool {
 	return ttype.size == TypeTuple
 }
 
+func IsGeneric(t *TTyping) bool {
+	if t.size == TypeGeneric {
+		return true
+	} else if t.size == TypeArr {
+		return IsGeneric(t.internal0)
+	} else if t.size == TypeTuple {
+		for _, element := range t.elements {
+			if !IsGeneric(element) {
+				return false
+			}
+		}
+		return true
+	} else if t.size == TypeMap {
+		return IsGeneric(t.internal0) || IsGeneric(t.internal1)
+	}
+	return false
+}
+
 func IsTheSameInstance(ttype1 *TTyping, ttype2 *TTyping) bool {
 	if ttype1 == ttype2 {
 		return true
@@ -163,7 +181,21 @@ func CanStore(dst *TTyping, src *TTyping) bool {
 	if IsArr(dst) && IsArr(src) {
 		return CanStore(dst.internal0, src.internal0)
 	}
+	if IsMap(dst) && IsMap(src) {
+		return CanStore(dst.internal0, src.internal0) && CanStore(dst.internal1, src.internal1)
+	}
+	if IsTuple(dst) && IsTuple(src) {
+		for i, element := range dst.elements {
+			if !CanStore(element, src.elements[i]) {
+				return false
+			}
+		}
+		return true
+	}
 	if IsAny(dst) {
+		return true
+	}
+	if IsGeneric(dst) {
 		return true
 	}
 	return false

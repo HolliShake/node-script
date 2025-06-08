@@ -39,22 +39,22 @@ func Load(env *TEnv) {
 		types.TFunc(true, []*types.TPair{types.CreatePair("value", types.TAny())}, types.TVoid(), false),
 	)
 
-	// Define the append function
-	DefineSymbol(
-		env,
-		strings.ToLower(GLOBAL_APPEND),
-		GLOBAL_APPEND,
-		MODULE_GLOBAL,
-		types.TFunc(
-			true,
-			[]*types.TPair{
-				types.CreatePair("slice", types.TArray(types.TAny())),
-				types.CreatePair("value", types.TAny()),
-			},
-			types.TArray(types.TAny()),
-			false,
-		),
-	)
+	// // Define the append function
+	// DefineSymbol(
+	// 	env,
+	// 	strings.ToLower(GLOBAL_APPEND),
+	// 	GLOBAL_APPEND,
+	// 	MODULE_GLOBAL,
+	// 	types.TFunc(
+	// 		true,
+	// 		[]*types.TPair{
+	// 			types.CreatePair("slice", types.TArray(types.TGeneric("T"))),
+	// 			types.CreatePair("value", types.TGeneric("T")),
+	// 		},
+	// 		types.TArray(types.TGeneric("T")),
+	// 		false,
+	// 	),
+	// )
 
 	// Define the panic function
 	DefineSymbol(

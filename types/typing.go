@@ -9,20 +9,21 @@ import (
 type TypeCode int
 
 const (
-	TypeAny    TypeCode = 69420
-	TypeI08    TypeCode = 7
-	TypeI16    TypeCode = 15
-	TypeI32    TypeCode = 31
-	TypeI64    TypeCode = 63
-	TypeNum    TypeCode = 1 + 11 + 52
-	TypeStr    TypeCode = math.MaxInt64
-	TypeBit    TypeCode = 1
-	TypeNil    TypeCode = 0
-	TypeArr    TypeCode = 0xc0ffee
-	TypeMap    TypeCode = 0xdeadbeef
-	TypeStruct TypeCode = 0x8badf00d
-	TypeFunc   TypeCode = 0x8badcafe
-	TypeTuple  TypeCode = 0x8badbeef
+	TypeAny     TypeCode = 69420
+	TypeI08     TypeCode = 7
+	TypeI16     TypeCode = 15
+	TypeI32     TypeCode = 31
+	TypeI64     TypeCode = 63
+	TypeNum     TypeCode = 1 + 11 + 52
+	TypeStr     TypeCode = math.MaxInt64
+	TypeBit     TypeCode = 1
+	TypeNil     TypeCode = 0
+	TypeArr     TypeCode = 0xc0ffee
+	TypeMap     TypeCode = 0xdeadbeef
+	TypeStruct  TypeCode = 0x8badf00d
+	TypeFunc    TypeCode = 0x8badcafe
+	TypeTuple   TypeCode = 0x8badbeef
+	TypeGeneric TypeCode = 0x8badc0de
 )
 
 const (
@@ -207,6 +208,8 @@ func (t *TTyping) ToString() string {
 			str = str + " panics"
 		}
 		return str
+	case TypeGeneric:
+		return "Generic" + "<" + t.repr + ">"
 	default:
 		panic("invalid type or not implemented")
 	}
@@ -242,7 +245,14 @@ func (t *TTyping) ToGoType() string {
 	case TypeStruct:
 		return t.repr
 	case TypeFunc:
-		panic("invalid type or not implemented")
+		returnType := t.internal0.ToGoType()
+		parameters := make([]string, len(t.members))
+		for i, parameter := range t.members {
+			parameters[i] = parameter.DataType.ToGoType()
+		}
+		return fmt.Sprintf("func(%s) %s", strings.Join(parameters, ","), returnType)
+	case TypeGeneric:
+		return "Generic" + "<" + t.repr + ">"
 	default:
 		panic("invalid type or not implemented")
 	}
@@ -327,6 +337,32 @@ func TTuple(elements []*TTyping) *TTyping {
 	typing := CreateTyping("tuple", TypeTuple)
 	typing.elements = elements
 	return typing
+}
+
+func TGeneric(name string) *TTyping {
+	typing := CreateTyping(name, TypeGeneric)
+	return typing
+}
+
+func ResolveCall(function *TTyping, arguments []*TTyping) *TTyping {
+	// fnParams := function.members
+	// fnReturn := function.internal0
+	// fnVariadic := function.variadic
+	// generics := make([]*TTyping, 0)
+	// for _, param := range fnParams {
+	// 	if !IsGeneric(param.DataType) {
+	// 		continue
+	// 	}
+	// 	generics = append(generics, param.DataType)
+	// }
+
+	// // If any of the parameters is a generic, we need to resolve it by compairing with arguments
+	// if len(generics) > 0 {
+
+	// }
+
+	// return function
+	return nil
 }
 
 func WhichBigger(a *TTyping, b *TTyping) *TTyping {

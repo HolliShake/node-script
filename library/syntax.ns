@@ -43,11 +43,10 @@ define main(args [str]) i32 {
         0xff,
         a,b,c,g
     );
-
     v := 2 << 2;
     println(v);
-    const arr [i32] = [1,2,3000];
-    arr2 := append(arr, 1, 2, 3);
-    println(arr, arr2);
+    const arr [i32] = [1,2,3000, 100];
+    println(arr);
+    run toNewThread();
     return 100;
 }

@@ -1732,6 +1732,7 @@ func (analyzer *TAnalyzer) visitRunStmnt(node *TAst) {
 	}
 	analyzer.write("go ", false)
 	analyzer.expression(exprNode)
+	analyzer.stack.Pop()
 }
 
 func (analyzer *TAnalyzer) visitReturn(node *TAst) {
