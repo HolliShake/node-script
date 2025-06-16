@@ -142,6 +142,12 @@ func run(goBinding *TGoBinding, scriptPath string) {
 }
 
 func main() {
+
 	// Parse and process arguments
 	processArgs(CreateGo(), parseArgs())
+	pkgs := GetPackages("os")
+	println(PackagesHasName(pkgs, "Args"))
+	if PackagesHasName(pkgs, "Args") {
+		println("Args found", PackagesGetName(pkgs, "Args").Type().String())
+	}
 }
