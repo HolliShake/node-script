@@ -2,7 +2,6 @@ import (
     Person
 ) from "./syntax.ns";
 
-
 import (
     name
 ) from "./test.ns";
@@ -11,6 +10,5 @@ struct Test {
     Name str;
     P Person;
 }
-
 
 

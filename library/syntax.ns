@@ -1,5 +1,16 @@
 import ( Dog ) from "./test.ns";
 
+namespace Utility {
+    define parseInt(data str) i32 {
+        return 0;
+    }
+    namespace String {
+        define isHex(data str) bool {
+            return true;
+        }
+    }
+}
+
 var DATA i32 = 100, TYPE str = "true", PascalTest i8 = 10;
 
 struct Person {
@@ -15,6 +26,8 @@ struct King {
 }
 
 define (p Person) GetPet() void panics {
+    Utility::parseInt("1000");
+    Utility::String::isHex("0xff");
     panic("error:nah!!");
 }
 
@@ -36,7 +49,7 @@ define toNewThread() i32 {
 
 define main(args [str]) i32 {
     local g num = 1000 + 20.2;
-    a, b, c := 1,2,1000;
+    a, b, c := 1, 2, 3;
     println(
         "Hello, World!",
         args,
@@ -45,8 +58,10 @@ define main(args [str]) i32 {
     );
     v := 2 << 2;
     println(v);
-    const arr [i32] = [1,2,3000, 100];
+    const arr [i32] = [1, 2, 3, 4];
     println(arr);
-    run toNewThread();
+    arr.Push(1000);
+    println(arr);
+    println(arr.Pop());
     return 100;
 }

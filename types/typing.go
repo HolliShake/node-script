@@ -94,6 +94,9 @@ func (t *TTyping) GetReturnType() *TTyping {
 }
 
 func (t *TTyping) HasMember(name string) bool {
+	if IsFunc(t) {
+		return false
+	}
 	for _, member := range t.members {
 		if member.Name == name {
 			return true
@@ -103,6 +106,9 @@ func (t *TTyping) HasMember(name string) bool {
 }
 
 func (t *TTyping) GetMember(name string) *TPair {
+	if IsFunc(t) {
+		return nil
+	}
 	for _, member := range t.members {
 		if member.Name == name {
 			return member
@@ -235,7 +241,7 @@ func (t *TTyping) ToGoType() string {
 	case TypeMap:
 		return "map[" + t.internal0.ToGoType() + "]" + t.internal1.ToGoType()
 	case TypeArr:
-		return "[]" + t.internal0.ToGoType()
+		return "*Array" + t.internal0.ToNormalName()
 	case TypeTuple:
 		elements := make([]string, len(t.elements))
 		for i, element := range t.elements {
@@ -253,6 +259,50 @@ func (t *TTyping) ToGoType() string {
 		return fmt.Sprintf("func(%s) %s", strings.Join(parameters, ","), returnType)
 	case TypeGeneric:
 		return "Generic" + "<" + t.repr + ">"
+	default:
+		panic("invalid type or not implemented")
+	}
+}
+
+func (t *TTyping) ToNormalName() string {
+	switch t.size {
+	case TypeI08,
+		TypeI16,
+		TypeI32,
+		TypeI64,
+		TypeNum,
+		TypeStr,
+		TypeBit,
+		TypeNil:
+		return t.ToGoType()
+	case TypeStruct:
+		return t.repr
+	case TypeFunc:
+		parameters_normal_name := ""
+		for i, parameter := range t.members {
+			parameters_normal_name += parameter.DataType.ToNormalName()
+			if i < len(t.members)-1 {
+				parameters_normal_name += "_"
+			}
+		}
+		return "func" + "_" + t.internal0.ToNormalName() + "_" + parameters_normal_name
+	case TypeTuple:
+		elements_normal_name := ""
+		for i, element := range t.elements {
+			elements_normal_name += element.ToNormalName()
+			if i < len(t.elements)-1 {
+				elements_normal_name += "_"
+			}
+		}
+		return "Tuple_" + elements_normal_name
+	case TypeArr:
+		return "Array_" + t.internal0.ToNormalName()
+	case TypeMap:
+		return "Map_" + t.internal0.ToNormalName() + "_" + t.internal1.ToNormalName()
+	case TypeAny:
+		return "Any"
+	case TypeGeneric:
+		return "Generic"
 	default:
 		panic("invalid type or not implemented")
 	}
@@ -315,6 +365,27 @@ func THashMap(key *TTyping, val *TTyping) *TTyping {
 func TArray(element *TTyping) *TTyping {
 	typing := CreateTyping("["+element.ToString()+"]", TypeArr)
 	typing.internal0 = element
+
+	// Push method
+	push_method := CreatePair("Push", TFunc(false, []*TPair{CreatePair("value", element)}, TVoid(), false))
+	typing.methods = append(typing.methods, push_method)
+
+	// Pop method
+	pop_method := CreatePair("Pop", TFunc(false, []*TPair{}, element, false))
+	typing.methods = append(typing.methods, pop_method)
+
+	// Length method
+	length_method := CreatePair("Length", TFunc(false, []*TPair{}, TInt64(), false))
+	typing.methods = append(typing.methods, length_method)
+
+	// Get method
+	get_method := CreatePair("Get", TFunc(false, []*TPair{CreatePair("index", TInt64())}, element, false))
+	typing.methods = append(typing.methods, get_method)
+
+	// Set method
+	set_method := CreatePair("Set", TFunc(false, []*TPair{CreatePair("index", TInt64()), CreatePair("value", element)}, TVoid(), false))
+	typing.methods = append(typing.methods, set_method)
+
 	return typing
 }
 

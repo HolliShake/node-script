@@ -101,6 +101,9 @@ func (analyzer *TAnalyzer) getType(node *TAst) *types.TTyping {
 				elementAst.Position,
 			)
 		}
+		if !analyzer.state.ArrayTypeExists(elementType) {
+			analyzer.state.AddArrayType(elementType)
+		}
 		return types.TArray(elementType)
 	case AstTypeHashMap:
 		keyAst := node.Ast0
@@ -270,16 +273,11 @@ func (analyzer *TAnalyzer) expression(node *TAst) {
 		// Restore
 		analyzer.src = saveSrc
 		analyzer.stack = saveStack
-		analyzer.write("append", false)
-		analyzer.write("(", false)
-		analyzer.write("make", false)
+		analyzer.write(GetConstructor(elementType), false)
 		analyzer.write("(", false)
 		analyzer.write("[]", false)
 		analyzer.write(elementType.ToGoType(), false)
-		analyzer.write(", ", false)
-		analyzer.write("0", false)
-		analyzer.write(")", false)
-		analyzer.write(", ", false)
+		analyzer.write("{", false)
 		for index, childNode := range elementsNode {
 			analyzer.expression(childNode)
 			actualType := analyzer.stack.Pop().DataType
@@ -295,7 +293,11 @@ func (analyzer *TAnalyzer) expression(node *TAst) {
 				analyzer.write(", ", false)
 			}
 		}
+		analyzer.write("}", false)
 		analyzer.write(")", false)
+		if !analyzer.state.ArrayTypeExists(elementType) {
+			analyzer.state.AddArrayType(elementType)
+		}
 		analyzer.stack.Push(CreateValue(
 			types.TArray(elementType),
 			nil,
@@ -314,10 +316,68 @@ func (analyzer *TAnalyzer) expression(node *TAst) {
 			types.TTuple(tupleTypes),
 			nil,
 		))
+	case AstMember:
+		objectNode := node.Ast0
+		memberNode := node.Ast1
+		if memberNode.Ttype != AstIDN {
+			RaiseLanguageCompileError(
+				analyzer.file.Path,
+				analyzer.file.Data,
+				"member name must be an identifier",
+				memberNode.Position,
+			)
+		}
+		analyzer.expression(objectNode)
+		objectValue := analyzer.stack.Pop()
+		if !objectValue.DataType.HasMember(memberNode.Str0) {
+			RaiseLanguageCompileError(
+				analyzer.file.Path,
+				analyzer.file.Data,
+				fmt.Sprintf("object %s has no member %s", objectValue.DataType.ToString(), memberNode.Str0),
+				objectNode.Position,
+			)
+		}
+		analyzer.write(".", false)
+		analyzer.write(memberNode.Str0, false)
+		member := objectValue.DataType.GetMember(memberNode.Str0)
+		analyzer.stack.Push(CreateValue(
+			member.DataType,
+			nil,
+		))
 	case AstCall:
 		objectNode := node.Ast0
 		parametersNode := node.AstArr0
-		analyzer.expression(objectNode)
+		if objectNode.Ttype == AstMember {
+			member_obj := objectNode.Ast0
+			member_name := objectNode.Ast1
+			if member_name.Ttype != AstIDN {
+				RaiseLanguageCompileError(
+					analyzer.file.Path,
+					analyzer.file.Data,
+					"member name must be an identifier",
+					member_name.Position,
+				)
+			}
+			analyzer.expression(member_obj)
+			member_obj_value := analyzer.stack.Pop()
+			if !member_obj_value.DataType.HasMethod(member_name.Str0) {
+				RaiseLanguageCompileError(
+					analyzer.file.Path,
+					analyzer.file.Data,
+					fmt.Sprintf("object %s has no method %s", member_obj_value.DataType.ToString(), member_name.Str0),
+					member_name.Position,
+				)
+			}
+			analyzer.write(".", false)
+			analyzer.write(member_name.Str0, false)
+			method := member_obj_value.DataType.GetMethod(member_name.Str0)
+			analyzer.stack.Push(CreateValue(
+				method.DataType,
+				nil,
+			))
+		} else {
+			analyzer.expression(objectNode)
+		}
 		objectValue := analyzer.stack.Pop()
 		if !types.IsFunc(objectValue.DataType) {
 			RaiseLanguageCompileError(
@@ -350,8 +410,8 @@ func (analyzer *TAnalyzer) expression(node *TAst) {
 			)
 		}
 		analyzer.write("(", false)
-		// TODO: Check parameter type is valid.
-		requiredParameters := objectValue.DataType.GetMembers()
+		members := objectValue.DataType.GetMembers()
+		requiredParameters := members
 		if objectValue.DataType.Variadic() {
 			requiredParameters = requiredParameters[:len(requiredParameters)-1]
 		}
@@ -373,6 +433,7 @@ func (analyzer *TAnalyzer) expression(node *TAst) {
 				}
 			}
 		} else if objectValue.DataType.Variadic() && len(requiredParameters) < len(parametersNode) {
+			theVariadictParmeter := members[len(members)-1]
 			for index, childNode := range parametersNode {
 				analyzer.expression(childNode)
 				if index < len(requiredParameters) {
@@ -387,7 +448,15 @@ func (analyzer *TAnalyzer) expression(node *TAst) {
 						)
 					}
 				} else {
-					analyzer.stack.Pop()
+					top := analyzer.stack.Pop()
+					if !types.CanStore(theVariadictParmeter.DataType, top.DataType) {
+						RaiseLanguageCompileError(
+							analyzer.file.Path,
+							analyzer.file.Data,
+							fmt.Sprintf("expected %s, got %s", theVariadictParmeter.DataType.ToString(), top.DataType.ToString()),
+							childNode.Position,
+						)
+					}
 				}
 				if index < len(parametersNode)-1 {
 					analyzer.write(", ", false)
@@ -1888,7 +1957,7 @@ func (analyzer *TAnalyzer) program(node *TAst) {
 	analyzer.incTb()
 	analyzer.srcTb()
 	analyzer.write(
-		fmt.Sprintf("%s(append(make([]string, 0, len(os.Args)), os.Args...))", mainFunc.NameSpace),
+		fmt.Sprintf("%s(%s(os.Args))", mainFunc.NameSpace, GetConstructor(paramType.GetInternal0())),
 		false,
 	)
 	analyzer.decTb()

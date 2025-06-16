@@ -105,6 +105,13 @@ func processFile(goBinding *TGoBinding, path string) {
 		}
 	}
 
+	// Generate the array code
+	ok, err := goBinding.Generate("arrays.go", tstate.GenerateArrays())
+	if err != nil || !ok {
+		fmt.Println(err)
+		RaiseSystemError(fmt.Sprintf("error generating array.go: %s", err))
+	}
+
 	// Collect and free memory
 	CollectAndFree()
 }

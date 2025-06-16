@@ -12,10 +12,9 @@ const (
 )
 
 const (
-	FMT_PRINTLN   = "Println"
-	FMT_PRINT     = "Print"
-	GLOBAL_APPEND = "append"
-	GLOBAL_PANIC  = "panic"
+	FMT_PRINTLN  = "Println"
+	FMT_PRINT    = "Print"
+	GLOBAL_PANIC = "panic"
 )
 
 func Load(env *TEnv) {
@@ -38,23 +37,6 @@ func Load(env *TEnv) {
 		MODULE_FMT,
 		types.TFunc(true, []*types.TPair{types.CreatePair("value", types.TAny())}, types.TVoid(), false),
 	)
-
-	// // Define the append function
-	// DefineSymbol(
-	// 	env,
-	// 	strings.ToLower(GLOBAL_APPEND),
-	// 	GLOBAL_APPEND,
-	// 	MODULE_GLOBAL,
-	// 	types.TFunc(
-	// 		true,
-	// 		[]*types.TPair{
-	// 			types.CreatePair("slice", types.TArray(types.TGeneric("T"))),
-	// 			types.CreatePair("value", types.TGeneric("T")),
-	// 		},
-	// 		types.TArray(types.TGeneric("T")),
-	// 		false,
-	// 	),
-	// )
 
 	// Define the panic function
 	DefineSymbol(
