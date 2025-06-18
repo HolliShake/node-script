@@ -1,8 +1,6 @@
 import ( Dog ) from "./test.ns";
-
 import ( Args ) from "go:os";
-
-import ( Println ) from "go:fmt";
+import ( Println, Print ) from "go:fmt";
 
 var DATA i32 = 100, TYPE str = "true", PascalTest i8 = 10;
 
@@ -60,6 +58,7 @@ define main(args [str]) i32 {
     println(arr);
     println(arr.Pop());
     run toNewThread();
+
     Println("Hello, from Go mix!!");
     return 100;
 }

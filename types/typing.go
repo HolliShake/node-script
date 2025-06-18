@@ -484,8 +484,11 @@ func TFromGo(goType string) *TTyping {
 	}
 
 	if strings.HasPrefix(goType, "[]") {
-		elementType := goType[2:]
-		return TArray(TFromGo(elementType))
+		elementType := TFromGo(goType[2:])
+		if elementType == nil {
+			return nil
+		}
+		return TArray(elementType)
 	}
 
 	if strings.HasPrefix(goType, "map") {
@@ -522,6 +525,10 @@ func TFromGo(goType string) *TTyping {
 			if len(paramAndTypePairStr) != 2 {
 				panic("invalid parameter type (!= 2)")
 			}
+			ptype := TFromGo(paramAndTypePairStr[1])
+			if ptype == nil {
+				return nil
+			}
 			parametersArray = append(parametersArray, CreatePair(paramAndTypePairStr[0], TFromGo(paramAndTypePairStr[1])))
 		}
 
@@ -542,7 +549,11 @@ func TFromGo(goType string) *TTyping {
 				if len(paramAndTypePairStr) != 2 {
 					panic("invalid return type (!= 2)")
 				}
-				tupleElements = append(tupleElements, TFromGo(paramAndTypePairStr[1]))
+				elementType := TFromGo(paramAndTypePairStr[1])
+				if elementType == nil {
+					return nil
+				}
+				tupleElements = append(tupleElements, elementType)
 			}
 			returnType = TTuple(tupleElements)
 		} else {
@@ -550,7 +561,7 @@ func TFromGo(goType string) *TTyping {
 		}
 
 		if returnType == nil {
-			panic("invalid return type")
+			return nil
 		}
 
 		return TFunc(isVariadic, parametersArray, returnType, false)
