@@ -178,7 +178,7 @@ func (t *TTyping) DefaultValue() string {
 	case TypeNil:
 		return ""
 	case TypeErr:
-		return ""
+		return "nill"
 	case TypeTuple:
 		elements := make([]string, len(t.elements))
 		for i, element := range t.elements {

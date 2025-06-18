@@ -51,6 +51,10 @@ func IsVoid(ttype *TTyping) bool {
 	return ttype.typeId == TypeNil
 }
 
+func IsError(ttype *TTyping) bool {
+	return ttype.typeId == TypeErr
+}
+
 func IsArr(ttype *TTyping) bool {
 	return ttype.typeId == TypeArr
 }

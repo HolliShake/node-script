@@ -6,6 +6,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"sync"
 )
 
 type TGoBinding struct {
@@ -14,6 +15,8 @@ type TGoBinding struct {
 	cachePath      string
 	goPathCache    string
 	goFmtPathCache string
+	// Mutex to protect concurrent access to cache fields
+	mu sync.RWMutex
 }
 
 func CreateGo() *TGoBinding {
@@ -21,33 +24,41 @@ func CreateGo() *TGoBinding {
 }
 
 func (g *TGoBinding) getExecPath() (string, error) {
-	// Return cached path if available
-	if g.execPathCache != "" {
-		return g.execPathCache, nil
+	// Check cache with read lock first
+	g.mu.RLock()
+	if path := g.execPathCache; path != "" {
+		g.mu.RUnlock()
+		return path, nil
 	}
+	g.mu.RUnlock()
 
 	executablePath, err := os.Executable()
 	if err != nil {
 		return "", err
 	}
-	// Remove filename.ext from the path
+
 	actualPath := filepath.Dir(executablePath)
 
-	_, ferr := os.Stat(actualPath)
-	if os.IsNotExist(ferr) {
+	if _, err := os.Stat(actualPath); os.IsNotExist(err) {
 		return "", errors.New("go executable path does not exist")
 	}
 
-	// Cache the result
+	// Update cache with write lock
+	g.mu.Lock()
 	g.execPathCache = actualPath
+	g.mu.Unlock()
+
 	return actualPath, nil
 }
 
 func (g *TGoBinding) getCachePath() (string, error) {
-	// Return cached path if available
-	if g.cachePath != "" {
-		return g.cachePath, nil
+	// Check cache with read lock first
+	g.mu.RLock()
+	if path := g.cachePath; path != "" {
+		g.mu.RUnlock()
+		return path, nil
 	}
+	g.mu.RUnlock()
 
 	dir, err := os.Getwd()
 	if err != nil {
@@ -55,17 +66,23 @@ func (g *TGoBinding) getCachePath() (string, error) {
 	}
 	cachePath := filepath.Join(dir, "__cache__")
 
-	// Cache the result
+	// Update cache with write lock
+	g.mu.Lock()
 	g.cachePath = cachePath
+	g.mu.Unlock()
+
 	return cachePath, nil
 }
 
 // API:Export
 func (g *TGoBinding) GetGo() (string, error) {
-	// Return cached path if available
-	if g.goPathCache != "" {
-		return g.goPathCache, nil
+	// Check cache with read lock first
+	g.mu.RLock()
+	if path := g.goPathCache; path != "" {
+		g.mu.RUnlock()
+		return path, nil
 	}
+	g.mu.RUnlock()
 
 	goPath, err := g.getExecPath()
 	if err != nil {
@@ -75,13 +92,17 @@ func (g *TGoBinding) GetGo() (string, error) {
 	// Check bundled Go first
 	bundledGoPath := filepath.Join(goPath, "thirdparty/go/bin/go")
 	if _, err := os.Stat(bundledGoPath); err == nil {
+		g.mu.Lock()
 		g.goPathCache = bundledGoPath
+		g.mu.Unlock()
 		return bundledGoPath, nil
 	}
 
 	// Then check system Go
 	if systemGoPath, err := exec.LookPath("go"); err == nil {
+		g.mu.Lock()
 		g.goPathCache = systemGoPath
+		g.mu.Unlock()
 		return systemGoPath, nil
 	}
 
@@ -90,10 +111,13 @@ func (g *TGoBinding) GetGo() (string, error) {
 
 // API:Export
 func (g *TGoBinding) GetGoFmt() (string, error) {
-	// Return cached path if available
-	if g.goFmtPathCache != "" {
-		return g.goFmtPathCache, nil
+	// Check cache with read lock first
+	g.mu.RLock()
+	if path := g.goFmtPathCache; path != "" {
+		g.mu.RUnlock()
+		return path, nil
 	}
+	g.mu.RUnlock()
 
 	goPath, err := g.getExecPath()
 	if err != nil {
@@ -103,13 +127,17 @@ func (g *TGoBinding) GetGoFmt() (string, error) {
 	// Check bundled gofmt first
 	bundledGoFmtPath := filepath.Join(goPath, "thirdparty/go/bin/gofmt")
 	if _, err := os.Stat(bundledGoFmtPath); err == nil {
+		g.mu.Lock()
 		g.goFmtPathCache = bundledGoFmtPath
+		g.mu.Unlock()
 		return bundledGoFmtPath, nil
 	}
 
 	// Then check system gofmt
 	if systemGoFmtPath, err := exec.LookPath("gofmt"); err == nil {
+		g.mu.Lock()
 		g.goFmtPathCache = systemGoFmtPath
+		g.mu.Unlock()
 		return systemGoFmtPath, nil
 	}
 
@@ -122,11 +150,14 @@ func (g *TGoBinding) InitGoModToCache() (bool, error) {
 	if err != nil {
 		return false, err
 	}
+
 	cachePath, err := g.getCachePath()
 	if err != nil {
 		return false, err
 	}
+
 	modulePath := "script/main"
+	goModPath := filepath.Join(cachePath, "go.mod")
 
 	// Check if the cache directory exists.
 	if _, err := os.Stat(cachePath); os.IsNotExist(err) {
@@ -136,17 +167,17 @@ func (g *TGoBinding) InitGoModToCache() (bool, error) {
 	}
 
 	// Check if the module already exists.
-	if _, err := os.Stat(filepath.Join(cachePath, "go.mod")); !os.IsNotExist(err) {
+	if _, err := os.Stat(goModPath); !os.IsNotExist(err) {
 		return true, nil
 	}
 
 	cmd := exec.Command(goPath, "mod", "init", modulePath)
 	cmd.Dir = cachePath
 
-	output, err := cmd.CombinedOutput()
-	if err != nil {
+	if output, err := cmd.CombinedOutput(); err != nil {
 		return false, errors.New(string(output))
 	}
+
 	return true, nil
 }
 
@@ -156,6 +187,7 @@ func (g *TGoBinding) GoExecFmt(file string) (bool, error) {
 	if err != nil {
 		return false, err
 	}
+
 	cachePath, err := g.getCachePath()
 	if err != nil {
 		return false, err
@@ -164,10 +196,10 @@ func (g *TGoBinding) GoExecFmt(file string) (bool, error) {
 	cmd := exec.Command(goPath, "-w", file)
 	cmd.Dir = cachePath
 
-	_, err = cmd.CombinedOutput()
-	if err != nil {
+	if _, err := cmd.CombinedOutput(); err != nil {
 		return false, err
 	}
+
 	return true, nil
 }
 
@@ -177,6 +209,7 @@ func (g *TGoBinding) GoRunCache() (string, error) {
 	if err != nil {
 		return "", err
 	}
+
 	cachePath, err := g.getCachePath()
 	if err != nil {
 		return "", err
@@ -189,6 +222,7 @@ func (g *TGoBinding) GoRunCache() (string, error) {
 	if err != nil {
 		return "", errors.New(string(output))
 	}
+
 	return string(output), nil
 }
 
@@ -198,6 +232,7 @@ func (g *TGoBinding) GoCompileCache(scriptPath string, output string) (bool, err
 	if err != nil {
 		return false, err
 	}
+
 	cachePath, err := g.getCachePath()
 	if err != nil {
 		return false, err
@@ -206,10 +241,10 @@ func (g *TGoBinding) GoCompileCache(scriptPath string, output string) (bool, err
 	cmd := exec.Command(goPath, "build", "-o", fmt.Sprintf("%s.exe", output), cachePath)
 	cmd.Dir = scriptPath
 
-	_, err = cmd.CombinedOutput()
-	if err != nil {
+	if _, err := cmd.CombinedOutput(); err != nil {
 		return false, err
 	}
+
 	return true, nil
 }
 
