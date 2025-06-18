@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"os"
+	"time"
 )
 
 const (
@@ -78,6 +79,26 @@ func processFile(goBinding *TGoBinding, path string) {
 		RaiseSystemError(fmt.Sprintf("error reading file %s", absPath))
 	}
 
+	// Generate the array code
+	startTime := time.Now()
+
+	// Start a goroutine to print elapsed seconds
+	done := make(chan bool)
+	go func() {
+		ticker := time.NewTicker(1 * time.Second)
+		defer ticker.Stop()
+
+		for {
+			select {
+			case <-ticker.C:
+				elapsed := time.Since(startTime)
+				fmt.Printf("Compiling... %d seconds elapsed\r", int(elapsed.Seconds()))
+			case <-done:
+				return
+			}
+		}
+	}()
+
 	// Create the state
 	tstate := CreateState()
 
@@ -105,8 +126,17 @@ func processFile(goBinding *TGoBinding, path string) {
 		}
 	}
 
-	// Generate the array code
-	ok, err := goBinding.Generate("arrays.go", tstate.GenerateArrays())
+	// Generate arrays
+	arrayCode := tstate.GenerateArrays()
+	ok, err := goBinding.Generate("arrays.go", arrayCode)
+
+	// Signal the goroutine to stop
+	done <- true
+
+	// Print final message
+	elapsed := time.Since(startTime)
+	fmt.Printf("Arrays generation completed in %d seconds\n", int(elapsed.Seconds()))
+
 	if err != nil || !ok {
 		fmt.Println(err)
 		RaiseSystemError(fmt.Sprintf("error generating array.go: %s", err))

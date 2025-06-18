@@ -38,6 +38,10 @@ define toNewThread() i32 {
     return 1;
 }
 
+define returnArr() [str] {
+    
+}
+
 
 define main(args [str]) i32 {
     local g num = 1000 + 20.2;
