@@ -1,5 +1,9 @@
 import ( Dog ) from "./test.ns";
 
+import ( Args ) from "go:os";
+
+import ( Println ) from "go:fmt";
+
 var DATA i32 = 100, TYPE str = "true", PascalTest i8 = 10;
 
 struct Person {
@@ -34,6 +38,7 @@ define toNewThread() i32 {
     return 1;
 }
 
+
 define main(args [str]) i32 {
     local g num = 1000 + 20.2;
     a, b, c := 1, 2, 3;
@@ -51,5 +56,6 @@ define main(args [str]) i32 {
     println(arr);
     println(arr.Pop());
     run toNewThread();
+    Println("Hello, from Go mix!!");
     return 100;
 }

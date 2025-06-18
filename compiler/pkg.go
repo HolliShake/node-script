@@ -7,7 +7,24 @@ import (
 	"golang.org/x/tools/go/packages"
 )
 
-func GetPackages(path string) []*packages.Package {
+func HasGoPackage(path string) bool {
+	cfg := &packages.Config{
+		Mode: packages.NeedName | packages.NeedTypes | packages.NeedTypesInfo | packages.NeedDeps | packages.NeedSyntax | packages.NeedImports,
+	}
+
+	pkgs, err := packages.Load(cfg, path)
+	if err != nil {
+		return false
+	}
+
+	return len(pkgs) > 0
+}
+
+func GetGoPackages(path string) []*packages.Package {
+	if !HasGoPackage(path) {
+		panic(fmt.Sprintf("package %s not found", path))
+	}
+
 	cfg := &packages.Config{
 		Mode: packages.NeedName | packages.NeedTypes | packages.NeedTypesInfo | packages.NeedDeps | packages.NeedSyntax | packages.NeedImports,
 	}

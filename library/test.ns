@@ -6,7 +6,7 @@ struct Dog {
 }
 
 define (d Dog) GetName() str {
-
+    
 }
 
 define name() Person {

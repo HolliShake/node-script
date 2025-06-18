@@ -232,6 +232,5 @@ func (g *TGoBinding) Generate(file string, data string) (bool, error) {
 	}
 
 	// Gofmt the file
-	_, err = g.GoExecFmt(cacheFile)
-	return err == nil, err
+	return g.GoExecFmt(cacheFile)
 }

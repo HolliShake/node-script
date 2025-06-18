@@ -1018,7 +1018,10 @@ func (analyzer *TAnalyzer) statement(node *TAst) {
 		analyzer.expression(node.Ast0)
 		value := analyzer.stack.Pop()
 		// Prevent standalone identifiers and constants that have no effect
-		if (node.Ast0.Ttype == AstIDN || node.Ast0.Ttype == AstCall || IsConstantValueNode(node.Ast0)) && !types.IsVoid(value.DataType) {
+		if (node.Ast0.Ttype == AstIDN ||
+			node.Ast0.Ttype == AstCall ||
+			IsConstantValueNode(node.Ast0)) &&
+			(!types.IsVoid(value.DataType) && !types.IsTuple(value.DataType)) {
 			RaiseLanguageCompileError(
 				analyzer.file.Path,
 				analyzer.file.Data,
@@ -1394,6 +1397,37 @@ func (analyzer *TAnalyzer) visitImport(node *TAst) {
 			"invalid import, import must have at least one attribute",
 			node.Position,
 		)
+	}
+
+	if strings.HasPrefix(pathNode.Str0, "go:") {
+		// Make sure this was handled by Forwarder
+		pkg := pathNode.Str0[3:]
+		analyzer.write("var", false)
+		analyzer.write("(", true)
+		analyzer.incTb()
+		for _, nameNode := range namesNode {
+			if nameNode.Ttype != AstIDN {
+				RaiseLanguageCompileError(
+					analyzer.file.Path,
+					analyzer.file.Data,
+					INVALID_IMPORT_NAME,
+					nameNode.Position,
+				)
+			}
+			if !analyzer.scope.Env.HasLocalSymbol(nameNode.Str0) {
+				RaiseLanguageCompileError(
+					analyzer.file.Path,
+					analyzer.file.Data,
+					fmt.Sprintf("symbol %s not found in import", nameNode.Str0),
+					nameNode.Position,
+				)
+			}
+			symbol := analyzer.scope.Env.GetSymbol(nameNode.Str0)
+			analyzer.write(fmt.Sprintf("%s %s = %s.%s", symbol.NameSpace, symbol.DataType.GoTypePure(true), pkg, nameNode.Str0), true)
+		}
+		analyzer.decTb()
+		analyzer.write(")", false)
+		return
 	}
 
 	// Ensure import path is relative
@@ -1841,7 +1875,7 @@ func (analyzer *TAnalyzer) program(node *TAst) {
 		analyzer.src = ""
 		analyzer.write("package main", true)
 		// Collect required modules
-		modules := make([]string, 0, 8) // Pre-allocate capacity
+		modules := make([]string, 0) // Pre-allocate capacity
 		if analyzer.file.IsMain {
 			modules = append(modules, "\"os\"")
 		}

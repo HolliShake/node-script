@@ -101,7 +101,7 @@ func processFile(goBinding *TGoBinding, path string) {
 		src := analyzer.Analyze()
 		ok, err := goBinding.Generate(GetFileNameWithoutExtension(file.Path)+".go", src)
 		if err != nil || !ok {
-			RaiseSystemError(fmt.Sprintf("error generating file %s", file.Path))
+			RaiseSystemError(fmt.Sprintf("error generating file %s: %s", file.Path, err))
 		}
 	}
 
@@ -142,12 +142,6 @@ func run(goBinding *TGoBinding, scriptPath string) {
 }
 
 func main() {
-
 	// Parse and process arguments
 	processArgs(CreateGo(), parseArgs())
-	pkgs := GetPackages("os")
-	println(PackagesHasName(pkgs, "Args"))
-	if PackagesHasName(pkgs, "Args") {
-		println("Args found", PackagesGetName(pkgs, "Args").Type().String())
-	}
 }

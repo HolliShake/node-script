@@ -485,6 +485,67 @@ func (f *TForward) forwardImport(fileJob TFileJob, node *TAst) {
 			node.Position,
 		)
 	}
+	if strings.HasPrefix(pathNode.Str0, "go:") {
+		pkg := pathNode.Str0[3:]
+		if !HasGoPackage(pkg) {
+			RaiseLanguageCompileError(
+				fileJob.Path,
+				fileJob.Data,
+				fmt.Sprintf("package %s not found", pkg),
+				pathNode.Position,
+			)
+		}
+
+		packages := GetGoPackages(pkg)
+		for _, pkg := range packages {
+			for _, nameNode := range namesNode {
+				if nameNode.Ttype != AstIDN {
+					RaiseLanguageCompileError(
+						fileJob.Path,
+						fileJob.Data,
+						INVALID_IMPORT_NAME,
+						nameNode.Position,
+					)
+				}
+
+				if !PackagesHasName(packages, nameNode.Str0) {
+					RaiseLanguageCompileError(
+						fileJob.Path,
+						fileJob.Data,
+						fmt.Sprintf("symbol %s not found in package %s", nameNode.Str0, pkg),
+						nameNode.Position,
+					)
+				}
+
+				symbol := PackagesGetName(packages, nameNode.Str0)
+				symbolType := symbol.Type()
+
+				types := types.TFromGo(symbolType.String())
+				if types == nil {
+					RaiseLanguageCompileError(
+						fileJob.Path,
+						fileJob.Data,
+						fmt.Sprintf("symbol %s has invalid type %s (unsupported go type conversion)", nameNode.Str0, symbolType.String()),
+						nameNode.Position,
+					)
+				}
+
+				fileJob.Env.AddSymbol(TSymbol{
+					Name:         nameNode.Str0,
+					NameSpace:    JoinVariableName(GetFileNameWithoutExtension(fileJob.Path), nameNode.Str0),
+					Module:       GetFileNameWithoutExtension(fileJob.Path),
+					DataType:     types,
+					Position:     nameNode.Position,
+					IsGlobal:     true,
+					IsConst:      true,
+					IsUsed:       true,
+					IsInitialize: true,
+				})
+			}
+		}
+		return
+	}
+
 	if !(strings.HasPrefix(pathNode.Str0, "./") || strings.HasPrefix(pathNode.Str0, "../")) {
 		RaiseLanguageCompileError(
 			fileJob.Path,

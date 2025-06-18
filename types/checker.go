@@ -1,27 +1,27 @@
 package types
 
 func IsAny(ttype *TTyping) bool {
-	return ttype.size == TypeAny
+	return ttype.typeId == TypeAny
 }
 
 func IsInt08(ttype *TTyping) bool {
-	return ttype.size == TypeI08
+	return ttype.typeId == TypeI08
 }
 
 func IsInt16(ttype *TTyping) bool {
-	return ttype.size == TypeI16
+	return ttype.typeId == TypeI16
 }
 
 func IsInt32(ttype *TTyping) bool {
-	return ttype.size == TypeI32
+	return ttype.typeId == TypeI32
 }
 
 func IsInt64(ttype *TTyping) bool {
-	return ttype.size == TypeI64
+	return ttype.typeId == TypeI64
 }
 
 func IsNum(ttype *TTyping) bool {
-	return ttype.size == TypeNum
+	return ttype.typeId == TypeNum
 }
 
 func IsAnyInt(ttype *TTyping) bool {
@@ -40,53 +40,35 @@ func IsAnyNumber(ttype *TTyping) bool {
 }
 
 func IsStr(ttype *TTyping) bool {
-	return ttype.size == TypeStr
+	return ttype.typeId == TypeStr
 }
 
 func IsBool(ttype *TTyping) bool {
-	return ttype.size == TypeBit
+	return ttype.typeId == TypeBit
 }
 
 func IsVoid(ttype *TTyping) bool {
-	return ttype.size == TypeNil
+	return ttype.typeId == TypeNil
 }
 
 func IsArr(ttype *TTyping) bool {
-	return ttype.size == TypeArr
+	return ttype.typeId == TypeArr
 }
 
 func IsMap(ttype *TTyping) bool {
-	return ttype.size == TypeMap
+	return ttype.typeId == TypeMap
 }
 
 func IsStruct(ttype *TTyping) bool {
-	return ttype.size == TypeStruct
+	return ttype.typeId == TypeStruct
 }
 
 func IsFunc(ttype *TTyping) bool {
-	return ttype.size == TypeFunc
+	return ttype.typeId == TypeFunc
 }
 
 func IsTuple(ttype *TTyping) bool {
-	return ttype.size == TypeTuple
-}
-
-func IsGeneric(t *TTyping) bool {
-	if t.size == TypeGeneric {
-		return true
-	} else if t.size == TypeArr {
-		return IsGeneric(t.internal0)
-	} else if t.size == TypeTuple {
-		for _, element := range t.elements {
-			if !IsGeneric(element) {
-				return false
-			}
-		}
-		return true
-	} else if t.size == TypeMap {
-		return IsGeneric(t.internal0) || IsGeneric(t.internal1)
-	}
-	return false
+	return ttype.typeId == TypeTuple
 }
 
 func IsTheSameInstance(ttype1 *TTyping, ttype2 *TTyping) bool {
@@ -97,7 +79,7 @@ func IsTheSameInstance(ttype1 *TTyping, ttype2 *TTyping) bool {
 }
 
 func IsValidKey(ttype *TTyping) bool {
-	switch ttype.size {
+	switch ttype.typeId {
 	case TypeI08,
 		TypeI16,
 		TypeI32,
@@ -118,7 +100,7 @@ func IsValidKey(ttype *TTyping) bool {
 }
 
 func IsValidElementType(ttype *TTyping) bool {
-	switch ttype.size {
+	switch ttype.typeId {
 	case TypeI08:
 	case TypeI16:
 	case TypeI32:
@@ -193,9 +175,6 @@ func CanStore(dst *TTyping, src *TTyping) bool {
 		return true
 	}
 	if IsAny(dst) {
-		return true
-	}
-	if IsGeneric(dst) {
 		return true
 	}
 	return false
