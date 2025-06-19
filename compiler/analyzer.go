@@ -8,12 +8,13 @@ import (
 )
 
 type TAnalyzer struct {
-	state *TState
-	file  TFileJob
-	scope *TScope
-	tab   int
-	src   string
-	stack *TEvaluationStack
+	state   *TState
+	file    TFileJob
+	scope   *TScope
+	tab     int
+	src     string
+	stack   *TEvaluationStack
+	modules []string
 }
 
 func CreateAnalyzer(state *TState, file TFileJob) *TAnalyzer {
@@ -25,6 +26,15 @@ func CreateAnalyzer(state *TState, file TFileJob) *TAnalyzer {
 	analyzer.src = ""
 	analyzer.stack = CreateEvaluationStack()
 	return analyzer
+}
+
+func (analyzer *TAnalyzer) addModule(module string) {
+	for _, m := range analyzer.modules {
+		if m == module {
+			return
+		}
+	}
+	analyzer.modules = append(analyzer.modules, module)
 }
 
 // Source UTIL
@@ -1402,6 +1412,7 @@ func (analyzer *TAnalyzer) visitImport(node *TAst) {
 	if strings.HasPrefix(pathNode.Str0, "go:") {
 		// Make sure this was handled by Forwarder
 		pkg := pathNode.Str0[3:]
+		analyzer.addModule(fmt.Sprintf("\"%s\"", pkg))
 		analyzer.write("var", false)
 		analyzer.write("(", true)
 		analyzer.incTb()
@@ -1423,6 +1434,7 @@ func (analyzer *TAnalyzer) visitImport(node *TAst) {
 				)
 			}
 			symbol := analyzer.scope.Env.GetSymbol(nameNode.Str0)
+			analyzer.srcTb()
 			analyzer.write(fmt.Sprintf("%s %s = %s.%s", symbol.NameSpace, symbol.DataType.GoTypePure(true), pkg, nameNode.Str0), true)
 		}
 		analyzer.decTb()
@@ -1875,23 +1887,21 @@ func (analyzer *TAnalyzer) program(node *TAst) {
 		analyzer.src = ""
 		analyzer.write("package main", true)
 		// Collect required modules
-		modules := make([]string, 0) // Pre-allocate capacity
 		if analyzer.file.IsMain {
-			modules = append(modules, "\"os\"")
+			analyzer.addModule("\"os\"")
 		}
 		// Use a map to track unique modules for better performance
 		moduleMap := make(map[string]struct{})
 		for _, symbol := range builtInEnv.Symbols {
 			if symbol.IsUsed && len(symbol.Module) > 0 {
-				moduleStr := fmt.Sprintf("\"%s\"", symbol.Module)
-				if _, exists := moduleMap[moduleStr]; !exists {
-					moduleMap[moduleStr] = struct{}{}
-					modules = append(modules, moduleStr)
+				if _, exists := moduleMap[symbol.Module]; !exists {
+					moduleMap[symbol.Module] = struct{}{}
+					analyzer.addModule(fmt.Sprintf("\"%s\"", symbol.Module))
 				}
 			}
 		}
-		if len(modules) > 0 {
-			analyzer.write(fmt.Sprintf("import (%s)", strings.Join(modules, "\n")), true)
+		if len(analyzer.modules) > 0 {
+			analyzer.write(fmt.Sprintf("import (%s)", strings.Join(analyzer.modules, "\n")), true)
 		}
 		analyzer.src = analyzer.src + src
 	}()

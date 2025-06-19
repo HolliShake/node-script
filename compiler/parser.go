@@ -260,24 +260,6 @@ func (parser *TParser) memberOrCall() *TAst {
 	return node
 }
 
-func (parser *TParser) postfix() *TAst {
-	node := parser.memberOrCall()
-	if node == nil {
-		return nil
-	}
-	for parser.matchV("++") || parser.matchV("--") {
-		opt := parser.look.Value
-		parser.acceptT(TokenSYM)
-		node = AstUnary(
-			GetAstTypeByPostfixOp(opt),
-			node.Position,
-			node,
-			opt,
-		)
-	}
-	return node
-}
-
 func (parser *TParser) ifExpression() *TAst {
 	if parser.matchV(KeyIf) {
 		start := parser.look.Position
@@ -313,7 +295,7 @@ func (parser *TParser) ifExpression() *TAst {
 			body,
 		)
 	}
-	return parser.postfix()
+	return parser.memberOrCall()
 }
 
 func (parser *TParser) unary() *TAst {
@@ -321,44 +303,6 @@ func (parser *TParser) unary() *TAst {
 		opt := parser.look.Value
 		parser.acceptT(TokenSYM)
 		node := parser.unary()
-		if node == nil {
-			RaiseLanguageCompileError(
-				parser.Tokenizer.File,
-				parser.Tokenizer.Data,
-				"missing right-hand expression",
-				parser.look.Position,
-			)
-			return nil
-		}
-		return AstUnary(
-			GetAstTypeByUnaryOp(opt),
-			node.Position,
-			node,
-			opt,
-		)
-	} else if parser.matchV("++") || parser.matchV("--") {
-		opt := parser.look.Value
-		parser.acceptT(TokenSYM)
-		node := parser.memberOrCall()
-		if node == nil {
-			RaiseLanguageCompileError(
-				parser.Tokenizer.File,
-				parser.Tokenizer.Data,
-				"missing right-hand expression",
-				parser.look.Position,
-			)
-			return nil
-		}
-		return AstUnary(
-			GetAstTypeByUnaryOp(opt),
-			node.Position,
-			node,
-			opt,
-		)
-	} else if parser.matchV(keyAwait) {
-		opt := parser.look.Value
-		parser.acceptT(TokenKEY)
-		node := parser.memberOrCall()
 		if node == nil {
 			RaiseLanguageCompileError(
 				parser.Tokenizer.File,
@@ -1402,6 +1346,24 @@ func (parser *TParser) blockStmnt() *TAst {
 	)
 }
 
+func (parser *TParser) postfix() *TAst {
+	node := parser.logical()
+	if node == nil {
+		return nil
+	}
+	for parser.matchV("++") || parser.matchV("--") {
+		opt := parser.look.Value
+		parser.acceptT(TokenSYM)
+		node = AstUnary(
+			GetAstTypeByPostfixOp(opt),
+			node.Position,
+			node,
+			opt,
+		)
+	}
+	return node
+}
+
 func (parser *TParser) tupleOrExpression() *TAst {
 	start := parser.look.Position
 	ended := start
@@ -1417,7 +1379,7 @@ func (parser *TParser) tupleOrExpression() *TAst {
 	for parser.matchV(",") {
 		parser.acceptV(",")
 		ended = parser.look.Position
-		rhs := parser.logical()
+		rhs := parser.postfix()
 		if rhs == nil {
 			RaiseLanguageCompileError(
 				parser.Tokenizer.File,

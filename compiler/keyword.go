@@ -25,15 +25,15 @@ const (
 	KeyTrue     = "true"
 	KeyFalse    = "false"
 	KeyNull     = "null"
-	keyAwait    = "await"
-	KeyInt8     = "i8"   // Typing
-	KeyInt16    = "i16"  // Typing
-	KeyInt32    = "i32"  // Typing
-	KeyInt64    = "i64"  // Typing
-	KeyNum      = "num"  // Typing
-	KeyStr      = "str"  // Typing
-	KeyBool     = "bool" // Typing
-	KeyVoid     = "void" // Typing
+	KeyInt8     = "i8"    // Typing
+	KeyInt16    = "i16"   // Typing
+	KeyInt32    = "i32"   // Typing
+	KeyInt64    = "i64"   // Typing
+	KeyNum      = "num"   // Typing
+	KeyStr      = "str"   // Typing
+	KeyBool     = "bool"  // Typing
+	KeyVoid     = "void"  // Typing
+	KeyError    = "error" // Typing
 )
 
 var Keywords = []string{
@@ -68,6 +68,7 @@ var Keywords = []string{
 	KeyStr,
 	KeyBool,
 	KeyVoid,
+	KeyError,
 }
 
 func IsKeyword(str string) bool {

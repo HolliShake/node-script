@@ -135,7 +135,7 @@ func processFile(goBinding *TGoBinding, path string) {
 
 	// Print final message
 	elapsed := time.Since(startTime)
-	fmt.Printf("Arrays generation completed in %d seconds\n", int(elapsed.Seconds()))
+	fmt.Printf("Completed in %d seconds\n", int(elapsed.Seconds()))
 
 	if err != nil || !ok {
 		fmt.Println(err)

@@ -167,10 +167,9 @@ func (t *TTyping) DefaultValue() string {
 	case TypeI08,
 		TypeI16,
 		TypeI32,
-		TypeI64:
+		TypeI64,
+		TypeNum:
 		return "0"
-	case TypeNum:
-		return "0.0"
 	case TypeStr:
 		return "\"\""
 	case TypeBit:
@@ -178,7 +177,7 @@ func (t *TTyping) DefaultValue() string {
 	case TypeNil:
 		return ""
 	case TypeErr:
-		return "nill"
+		return "nil"
 	case TypeTuple:
 		elements := make([]string, len(t.elements))
 		for i, element := range t.elements {
@@ -189,10 +188,10 @@ func (t *TTyping) DefaultValue() string {
 		return fmt.Sprintf("NewArray%s([]%s{})", t.internal0.ToNormalName(), t.internal0.ToGoType())
 	case TypeMap:
 		return fmt.Sprintf("make(map[%s]%s)", t.internal0.ToGoType(), t.internal1.ToGoType())
-	case TypeStruct:
-		return t.repr + "{}"
 	case TypeFunc:
 		panic("invalid type or not implemented")
+	case TypeStruct:
+		return t.repr + "{}"
 	default:
 		panic("invalid type or not implemented")
 	}
@@ -303,7 +302,8 @@ func (t *TTyping) ToNormalName() string {
 		TypeNum,
 		TypeStr,
 		TypeBit,
-		TypeNil:
+		TypeNil,
+		TypeErr:
 		return t.ToGoType()
 	case TypeTuple:
 		elements_normal_name := ""

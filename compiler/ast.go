@@ -21,7 +21,6 @@ const (
 	AstBitNot          AstType = iota
 	AstPlus2           AstType = iota
 	AstMinus2          AstType = iota
-	AstAwait           AstType = iota
 	AstMul             AstType = iota
 	AstDiv             AstType = iota
 	AstMod             AstType = iota
@@ -285,12 +284,6 @@ func GetAstTypeByUnaryOp(opt string) AstType {
 		return AstNot
 	case "~":
 		return AstBitNot
-	case "++":
-		return AstPlus2
-	case "--":
-		return AstMinus2
-	case keyAwait:
-		return AstAwait
 	default:
 		RaiseSystemError("invalid or not implemented unary operator!")
 	}
