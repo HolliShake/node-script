@@ -1679,9 +1679,21 @@ func (analyzer *TAnalyzer) visitImport(node *TAst) {
 				analyzer.srcTb()
 				if types.IsArr(info.DataType) {
 					elementType := asVar.dataType.GetInternal0()
-					analyzer.write(fmt.Sprintf("%s %s = %s(%s.%s)", info.NameSpace, asVar.dataType.ToGoType(), GetConstructor(elementType), pkg, asVar.name), true)
+					analyzer.write(fmt.Sprintf(
+						"%s %s = %s(%s.%s)",
+						info.NameSpace,
+						asVar.dataType.ToGoType(),
+						GetConstructor(elementType),
+						pkg, asVar.name,
+					), true)
 				} else {
-					analyzer.write(fmt.Sprintf("%s %s = %s.%s", info.NameSpace, asVar.dataType.ToGoType(), pkg, asVar.name), true)
+					analyzer.write(fmt.Sprintf(
+						"%s %s = %s.%s",
+						info.NameSpace,
+						asVar.dataType.ToGoType(),
+						pkg,
+						asVar.name,
+					), true)
 				}
 			}
 			analyzer.decTb()
