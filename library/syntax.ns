@@ -78,5 +78,9 @@ function main(args [str]) i32 {
     local intptr i32* = null;
     println(intptr);
     Println(p.Name, p.GetName());
+    Println(+200);
+    Println(-200);
+    Println(~200);
+    Println(!false);
     return 100;
 }

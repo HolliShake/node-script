@@ -600,6 +600,46 @@ func (analyzer *TAnalyzer) expression(node *TAst) {
 			types.ToInstance(objDataType),
 			nil,
 		))
+	case AstPlus:
+		analyzer.write("+", false)
+		analyzer.expression(node.Ast0)
+		value := analyzer.stack.Pop()
+		analyzer.stack.Push(CreateValue(
+			value.DataType,
+			nil,
+		))
+	case AstMinus:
+		analyzer.write("-", false)
+		analyzer.expression(node.Ast0)
+		value := analyzer.stack.Pop()
+		analyzer.stack.Push(CreateValue(
+			value.DataType,
+			nil,
+		))
+	case AstNot:
+		analyzer.write("!", false)
+		analyzer.expression(node.Ast0)
+		value := analyzer.stack.Pop()
+		if !types.IsBool(value.DataType) {
+			RaiseLanguageCompileError(
+				analyzer.file.Path,
+				analyzer.file.Data,
+				"expected bool, got "+value.DataType.ToString(),
+				node.Position,
+			)
+		}
+		analyzer.stack.Push(CreateValue(
+			analyzer.state.TBit,
+			nil,
+		))
+	case AstBitNot:
+		analyzer.write("^", false)
+		analyzer.expression(node.Ast0)
+		value := analyzer.stack.Pop()
+		analyzer.stack.Push(CreateValue(
+			value.DataType,
+			nil,
+		))
 	case AstAllocation:
 		objectNode := node.Ast0
 		src := analyzer.src
