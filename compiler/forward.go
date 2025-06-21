@@ -404,7 +404,7 @@ func (f *TForward) forwardStruct(fileJob TFileJob, node *TAst) {
 	})
 }
 
-func (f *TForward) forwardDefine(fileJob TFileJob, node *TAst, error bool) {
+func (f *TForward) forwardFunction(fileJob TFileJob, node *TAst, error bool) {
 	newEnv := CreateEnv(fileJob.Env)
 	panics := node.Flg0
 	nameNode := node.Ast0
@@ -781,8 +781,8 @@ func (f *TForward) forward(fileJob TFileJob) {
 		switch child.Ttype {
 		case AstStruct:
 			f.forwardStruct(fileJob, child)
-		case AstDefine:
-			f.forwardDefine(fileJob, child, false)
+		case AstFunction:
+			f.forwardFunction(fileJob, child, false)
 		case AstImport:
 			f.forwardImport(fileJob, child)
 		case AstVar:
@@ -824,7 +824,7 @@ func (f *TForward) build() {
 	// Delayed defines resolution
 	for f.hasDelayedDefines() {
 		delayedDefine := f.popDelayedDefines()
-		f.forwardDefine(delayedDefine.SrcFile, delayedDefine.Node, true)
+		f.forwardFunction(delayedDefine.SrcFile, delayedDefine.Node, true)
 	}
 
 	// Import later resolution

@@ -12,7 +12,7 @@ struct Person {
 }
 
 
-define (p Person) GetName() str {
+function (p Person) GetName() str {
     return p.Name;
 }
 
@@ -22,35 +22,35 @@ struct King {
     Pet  Dog;
 }
 
-define (p Person) GetPet() void panics {
-   panic("tada!!!");
+function (p Person) GetPet() void panics {
+   panic("Tada!!!");
 }
 
 const Kill str = "adadaasdas";
 
-define add(a i32, b i32) i32 panics {
+function add(a i32, b i32) i32 panics {
     panic(">> Damn..");
     return a + b;
 }
 
-define justCall() void panics {
+function justCall() void panics {
     println(add(10, 20));
 }
 
-define toNewThread() i32 {
+function toNewThread() i32 {
     println("Hello World From new Thread!!");
     return 1;
 }
 
-define returnArr() [str] {
+function returnArr() [str] {
     return ["A", "B", "C"];
 }
 
-define returnErr() (bool, error) {
+function returnErr() (bool, error) {
     return true, null;
 }
 
-define main(args [str]) i32 {
+function main(args [str]) i32 {
     local g num = 1000 + 20.2;
     a, b, c := 1, 2, 3;
     println(
@@ -71,10 +71,10 @@ define main(args [str]) i32 {
     x, y := returnErr();
     Println(x, y);
     local p Person* = new Person {
-        Name: "Philipp Andrew"
+        Name: "Philipp Andrew",
+        Age: 2
     };
     println(p);
-
     local intptr i32* = null;
     println(intptr);
     Println(p.Name, p.GetName());

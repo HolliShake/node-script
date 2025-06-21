@@ -839,8 +839,8 @@ func (parser *TParser) typing() *TAst {
 func (parser *TParser) statement() *TAst {
 	if parser.matchV(KeyStruct) {
 		return parser.structDecl()
-	} else if parser.matchV(KeyDefine) {
-		return parser.defineDecl()
+	} else if parser.matchV(KeyFunction) {
+		return parser.functionDecl()
 	} else if parser.matchV(KeyImport) {
 		return parser.importDecl()
 	} else if parser.matchV(KeyVar) {
@@ -918,10 +918,10 @@ func (parser *TParser) structDecl() *TAst {
 	)
 }
 
-func (parser *TParser) defineDecl() *TAst {
+func (parser *TParser) functionDecl() *TAst {
 	start := parser.look.Position
 	ended := start
-	parser.acceptV(KeyDefine)
+	parser.acceptV(KeyFunction)
 	var thisName *TAst
 	var thisType *TAst
 	isMethod := parser.matchV("(")
@@ -993,11 +993,11 @@ func (parser *TParser) defineDecl() *TAst {
 	}
 	ended = parser.look.Position
 	parser.acceptV("}")
-	funcType := AstDefine
+	funcType := AstFunction
 	if isMethod {
 		funcType = AstMethod
 	}
-	return AstDefineDec(
+	return AstFunctionDec(
 		funcType,
 		start.Merge(ended),
 		funcNameAst,

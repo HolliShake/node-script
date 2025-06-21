@@ -3,7 +3,7 @@ package main
 const (
 	// Keywords
 	KeyStruct   = "struct"
-	KeyDefine   = "define"
+	KeyFunction = "function"
 	KeyImport   = "import"
 	KeyFrom     = "from"
 	KeyVar      = "var"
@@ -39,7 +39,7 @@ const (
 
 var Keywords = []string{
 	KeyStruct,
-	KeyDefine,
+	KeyFunction,
 	KeyImport,
 	KeyFrom,
 	KeyVar,

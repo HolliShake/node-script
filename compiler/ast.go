@@ -69,7 +69,7 @@ const (
 	AstTypeArray       AstType = iota // Typing
 	AstStruct          AstType = iota
 	AstMethod          AstType = iota
-	AstDefine          AstType = iota
+	AstFunction        AstType = iota
 	AstDo              AstType = iota
 	AstWhile           AstType = iota
 	AstImport          AstType = iota
@@ -206,7 +206,7 @@ func AstStructDec(ttype AstType, position TPosition, name *TAst, fieldNames []*T
 	return ast
 }
 
-func AstDefineDec(ttype AstType, position TPosition, name *TAst, returnType *TAst, paramNames []*TAst, paramTypes []*TAst, children []*TAst, panics bool) *TAst {
+func AstFunctionDec(ttype AstType, position TPosition, name *TAst, returnType *TAst, paramNames []*TAst, paramTypes []*TAst, children []*TAst, panics bool) *TAst {
 	ast := CreateAst(ttype, position)
 	ast.Flg0 = panics
 	ast.Ast0 = name

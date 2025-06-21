@@ -1142,9 +1142,9 @@ func (analyzer *TAnalyzer) statement(node *TAst) {
 	switch node.Ttype {
 	case AstStruct:
 		analyzer.visitStruct(node)
-	case AstDefine,
+	case AstFunction,
 		AstMethod:
-		analyzer.visitDefine(node)
+		analyzer.visitFunction(node)
 	case AstImport:
 		analyzer.visitImport(node)
 	case AstVar:
@@ -1323,7 +1323,7 @@ func (analyzer *TAnalyzer) visitStruct(node *TAst) {
 	analyzer.write("}", false)
 }
 
-func (analyzer *TAnalyzer) visitDefine(node *TAst) {
+func (analyzer *TAnalyzer) visitFunction(node *TAst) {
 	if !analyzer.scope.InGlobal() {
 		RaiseLanguageCompileError(
 			analyzer.file.Path,

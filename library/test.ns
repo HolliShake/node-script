@@ -5,11 +5,11 @@ struct Dog {
     Age i32;
 }
 
-define (d Dog) GetName() str {
+function (d Dog) GetName() str {
     
 }
 
-define name() Person {
+function name() Person {
     
 }
 
