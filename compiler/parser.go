@@ -386,6 +386,25 @@ func (parser *TParser) unary() *TAst {
 			node,
 			opt,
 		)
+	} else if parser.matchV(KeyNew) {
+		start := parser.look.Position
+		ended := start
+		parser.acceptV(KeyNew)
+		expression := parser.expression()
+		if expression == nil {
+			RaiseLanguageCompileError(
+				parser.Tokenizer.File,
+				parser.Tokenizer.Data,
+				"missing expression",
+				parser.look.Position,
+			)
+		}
+		ended = expression.Position
+		return AstSingle(
+			AstAllocation,
+			start.Merge(ended),
+			expression,
+		)
 	}
 	return parser.ifExpression()
 }

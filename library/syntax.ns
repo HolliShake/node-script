@@ -68,5 +68,6 @@ define main(args [str]) i32 {
     p := Person {
         Name: "Philipp Andrew"
     };
+    println(p);
     return 100;
 }

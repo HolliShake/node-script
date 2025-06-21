@@ -25,6 +25,7 @@ const (
 	KeyTrue     = "true"
 	KeyFalse    = "false"
 	KeyNull     = "null"
+	KeyNew      = "new"
 	KeyInt8     = "i8"    // Typing
 	KeyInt16    = "i16"   // Typing
 	KeyInt32    = "i32"   // Typing

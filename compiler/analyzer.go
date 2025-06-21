@@ -495,6 +495,78 @@ func (analyzer *TAnalyzer) expression(node *TAst) {
 			objectValue.DataType.GetReturnType(),
 			nil,
 		))
+	case AstStruct:
+		objectNode := node.Ast0
+		namesNode := node.AstArr0
+		valuesNode := node.AstArr1
+		if objectNode.Ttype != AstIDN {
+			RaiseLanguageCompileError(
+				analyzer.file.Path,
+				analyzer.file.Data,
+				"struct name must be an identifier",
+				objectNode.Position,
+			)
+		}
+		if len(namesNode) != len(valuesNode) {
+			RaiseLanguageCompileError(
+				analyzer.file.Path,
+				analyzer.file.Data,
+				"struct name and values must have the same length",
+				objectNode.Position,
+			)
+		}
+		if !analyzer.scope.Env.HasGlobalSymbol(objectNode.Str0) {
+			RaiseLanguageCompileError(
+				analyzer.file.Path,
+				analyzer.file.Data,
+				fmt.Sprintf("struct %s not found", objectNode.Str0),
+				objectNode.Position,
+			)
+		}
+		objectInfo := analyzer.scope.Env.GetSymbol(objectNode.Str0)
+		objDataType := objectInfo.DataType
+		analyzer.write(objectInfo.NameSpace, false)
+		analyzer.write(" ", false)
+		analyzer.write("{", false)
+		for index, childNode := range namesNode {
+			if childNode.Ttype != AstIDN {
+				RaiseLanguageCompileError(
+					analyzer.file.Path,
+					analyzer.file.Data,
+					"struct name must be an identifier",
+					childNode.Position,
+				)
+			}
+			if !objDataType.HasMember(childNode.Str0) {
+				RaiseLanguageCompileError(
+					analyzer.file.Path,
+					analyzer.file.Data,
+					fmt.Sprintf("struct %s has no member %s", objectNode.Str0, childNode.Str0),
+					childNode.Position,
+				)
+			}
+			analyzer.write(childNode.Str0, false)
+			analyzer.write(": ", false)
+			memberType := objDataType.GetMember(childNode.Str0).DataType
+			analyzer.expression(valuesNode[index])
+			actualType := analyzer.stack.Pop().DataType
+			if !types.CanStore(memberType, actualType) {
+				RaiseLanguageCompileError(
+					analyzer.file.Path,
+					analyzer.file.Data,
+					fmt.Sprintf("cannot store %s in %s", actualType.ToString(), memberType.ToString()),
+					childNode.Position,
+				)
+			}
+			if index < len(namesNode)-1 {
+				analyzer.write(", ", false)
+			}
+		}
+		analyzer.write("}", false)
+		analyzer.stack.Push(CreateValue(
+			objDataType,
+			nil,
+		))
 	case AstMul:
 		lhsNode := node.Ast0
 		rhsNode := node.Ast1

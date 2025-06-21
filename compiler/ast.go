@@ -21,6 +21,7 @@ const (
 	AstBitNot          AstType = iota
 	AstPlus2           AstType = iota
 	AstMinus2          AstType = iota
+	AstAllocation      AstType = iota
 	AstMul             AstType = iota
 	AstDiv             AstType = iota
 	AstMod             AstType = iota
