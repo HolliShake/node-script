@@ -418,6 +418,12 @@ func TArray(element *TTyping) *TTyping {
 	return typing
 }
 
+func TArrayFromGo(element *TTyping) *TTyping {
+	typing := CreateTyping("[OVERRIDEME]", TypeArr)
+	typing.internal0 = element
+	return typing
+}
+
 func THashMap(key *TTyping, val *TTyping) *TTyping {
 	typing := CreateTyping("[OVERRIDEME]", TypeArr)
 	typing.internal0 = key
@@ -488,7 +494,7 @@ func TFromGo(goType string) *TTyping {
 		if elementType == nil {
 			return nil
 		}
-		return TArray(elementType)
+		return TArrayFromGo(elementType)
 	}
 
 	if strings.HasPrefix(goType, "map") {

@@ -74,6 +74,10 @@ func (f *TForward) pushFile(file TFileJob) {
 }
 
 func (f *TForward) replaceFile(file TFileJob) {
+	if !f.hasFile(file.Path) {
+		f.pushFile(file)
+		return
+	}
 	for i := range f.Files {
 		if f.Files[i].Path == file.Path {
 			f.Files[i] = file
