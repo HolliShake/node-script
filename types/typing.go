@@ -183,7 +183,7 @@ func (t *TTyping) DefaultValue() string {
 		for i, element := range t.elements {
 			elements[i] = element.DefaultValue()
 		}
-		return "(" + strings.Join(elements, ",") + ")"
+		return strings.Join(elements, ", ")
 	case TypeArr:
 		return fmt.Sprintf("NewArray%s([]%s{})", t.internal0.ToNormalName(), t.internal0.ToGoType())
 	case TypeMap:
@@ -214,7 +214,7 @@ func (t *TTyping) ToString() string {
 		for i, element := range t.elements {
 			elements[i] = element.ToString()
 		}
-		return "(" + strings.Join(elements, ",") + ")"
+		return "(" + strings.Join(elements, ", ") + ")"
 	case TypeArr:
 		return "[" + t.internal0.ToString() + "]"
 	case TypeMap:
@@ -262,7 +262,7 @@ func (t *TTyping) GoTypePure(pure bool) string {
 		for i, element := range t.elements {
 			elements[i] = element.GoTypePure(pure)
 		}
-		return "(" + strings.Join(elements, ",") + ")"
+		return "(" + strings.Join(elements, ", ") + ")"
 	case TypeArr:
 		if pure {
 			return "[]" + t.internal0.GoTypePure(pure)

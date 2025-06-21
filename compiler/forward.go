@@ -225,6 +225,23 @@ func (f *TForward) getType(fileJob TFileJob, node *TAst) *types.TTyping {
 		return f.State.TBit
 	case AstTypeVoid:
 		return f.State.TNil
+	case AstTypeError:
+		return f.State.TErr
+	case AstTypeTuple:
+		elementTypes := make([]*types.TTyping, 0)
+		for _, elementAst := range node.AstArr0 {
+			elementType := f.getType(fileJob, elementAst)
+			if elementType == nil {
+				f.pushMissingTypes(TMissingTypeJob{
+					file:    fileJob,
+					NameAst: elementAst,
+					TypeAst: elementAst,
+				})
+				return nil
+			}
+			elementTypes = append(elementTypes, elementType)
+		}
+		return types.TTuple(elementTypes)
 	case AstTypeHashMap:
 		keyAst := node.Ast0
 		valAst := node.Ast1

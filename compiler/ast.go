@@ -61,7 +61,9 @@ const (
 	AstTypeStr         AstType = iota // Typing
 	AstTypeBool        AstType = iota // Typing
 	AstTypeVoid        AstType = iota // Typing
+	AstTypeError       AstType = iota // Typing
 	AstTypeFunc        AstType = iota // Typing
+	AstTypeTuple       AstType = iota // Typing
 	AstTypeHashMap     AstType = iota // Typing
 	AstTypeArray       AstType = iota // Typing
 	AstStruct          AstType = iota

@@ -100,6 +100,15 @@ func (analyzer *TAnalyzer) getType(node *TAst) *types.TTyping {
 		return analyzer.state.TBit
 	case AstTypeVoid:
 		return analyzer.state.TNil
+	case AstTypeError:
+		return analyzer.state.TErr
+	case AstTypeTuple:
+		elementTypes := make([]*types.TTyping, 0)
+		for _, elementAst := range node.AstArr0 {
+			elementType := analyzer.getType(elementAst)
+			elementTypes = append(elementTypes, elementType)
+		}
+		return types.TTuple(elementTypes)
 	case AstTypeArray:
 		elementAst := node.Ast0
 		elementType := analyzer.getType(elementAst)

@@ -590,6 +590,7 @@ func (parser *TParser) baseType() *TAst {
 		)
 	} else if parser.matchV("(") {
 		start := parser.look.Position
+		ended := start
 		parser.acceptV("(")
 		argumentTypes := make([]*TAst, 0)
 		argN := parser.typeOrNil()
@@ -610,19 +611,28 @@ func (parser *TParser) baseType() *TAst {
 			}
 		}
 		parser.acceptV(")")
-		returnNode := parser.typeOrNil()
-		if returnNode == nil {
-			RaiseLanguageCompileError(
-				parser.Tokenizer.File,
-				parser.Tokenizer.Data,
-				"missing return type",
-				parser.look.Position,
+		ended = parser.look.Position
+		if parser.matchV(":") {
+			returnNode := parser.typeOrNil()
+			ended = returnNode.Position
+			if returnNode == nil {
+				RaiseLanguageCompileError(
+					parser.Tokenizer.File,
+					parser.Tokenizer.Data,
+					"missing return type",
+					parser.look.Position,
+				)
+			}
+			return AstSingleWithArray(
+				AstTypeFunc,
+				start.Merge(ended),
+				returnNode,
+				argumentTypes,
 			)
 		}
-		return AstSingleWithArray(
-			AstTypeFunc,
-			start.Merge(returnNode.Position),
-			returnNode,
+		return AstSingleArray(
+			AstTypeTuple,
+			start.Merge(ended),
 			argumentTypes,
 		)
 	} else if parser.matchT(TokenKEY) && parser.matchV(KeyInt8) {
@@ -684,6 +694,14 @@ func (parser *TParser) baseType() *TAst {
 	} else if parser.matchT(TokenKEY) && parser.matchV(KeyVoid) {
 		node := AstTerminal(
 			AstTypeVoid,
+			parser.look.Position,
+			parser.look.Value,
+		)
+		parser.acceptT(TokenKEY)
+		return node
+	} else if parser.matchT(TokenKEY) && parser.matchV(KeyError) {
+		node := AstTerminal(
+			AstTypeError,
 			parser.look.Position,
 			parser.look.Value,
 		)

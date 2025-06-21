@@ -40,6 +40,9 @@ define returnArr() [str] {
     return ["A", "B", "C"];
 }
 
+define returnErr() (bool, error) {
+    
+}
 
 define main(args [str]) i32 {
     local g num = 1000 + 20.2;
@@ -59,5 +62,6 @@ define main(args [str]) i32 {
     println(arr.Pop());
     run toNewThread();
     Println("Hello, from Go mix!!");
+    returnErr();
     return 100;
 }
