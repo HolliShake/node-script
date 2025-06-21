@@ -1354,11 +1354,42 @@ func (analyzer *TAnalyzer) visitStruct(node *TAst) {
 	analyzer.srcSp()
 	analyzer.write("{", true)
 	analyzer.incTb()
+	analyzer.srcTb()
 	analyzer.write(fmt.Sprintf("newInstance := new(%s)", structName), true)
 	for _, attrNode := range namesNode {
+		analyzer.srcTb()
 		analyzer.write(fmt.Sprintf("newInstance.%s = instance.%s", attrNode.Str0, attrNode.Str0), true)
 	}
+	analyzer.srcTb()
 	analyzer.write("return newInstance", true)
+	analyzer.decTb()
+	analyzer.write("}", false)
+
+	// Create a String method for the struct
+	analyzer.srcNl()
+	analyzer.write(fmt.Sprintf("func (instance %s) String() string", structName), false)
+	analyzer.srcSp()
+	analyzer.write("{", true)
+	analyzer.incTb()
+	analyzer.srcTb()
+	analyzer.write("str := \"\"", true)
+	analyzer.srcTb()
+	analyzer.write(fmt.Sprintf("str += \"%s \"", nameNode.Str0), true)
+	analyzer.srcTb()
+	analyzer.write("str += \"{ \"", true)
+	analyzer.incTb()
+	for index, attrNode := range namesNode {
+		analyzer.srcTb()
+		analyzer.write(fmt.Sprintf("str += fmt.Sprintf(\"%s: %%v\", instance.%s)", attrNode.Str0, attrNode.Str0), true)
+		if index < len(namesNode)-1 {
+			analyzer.write("str += \", \"", true)
+		}
+	}
+	analyzer.decTb()
+	analyzer.srcTb()
+	analyzer.write("str += \" }\"", true)
+	analyzer.srcTb()
+	analyzer.write("return str", true)
 	analyzer.decTb()
 	analyzer.write("}", false)
 }
@@ -2147,6 +2178,7 @@ func (analyzer *TAnalyzer) program(node *TAst) {
 		analyzer.src = ""
 		analyzer.write("package main", true)
 		// Collect required modules
+		analyzer.addModule("\"fmt\"")
 		if analyzer.file.IsMain {
 			analyzer.addModule("\"os\"")
 		}

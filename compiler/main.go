@@ -122,7 +122,7 @@ func processFile(goBinding *TGoBinding, path string) {
 		src := analyzer.Analyze()
 		ok, err := goBinding.Generate(GetFileNameWithoutExtension(file.Path)+".go", src)
 		if err != nil || !ok {
-			RaiseSystemError(fmt.Sprintf("error generating file %s: %s", file.Path, err))
+			RaiseSystemError(fmt.Sprintf("[%s]: error generating file %s", err.Error(), file.Path))
 		}
 	}
 
