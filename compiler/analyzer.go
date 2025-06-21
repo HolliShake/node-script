@@ -1677,7 +1677,12 @@ func (analyzer *TAnalyzer) visitImport(node *TAst) {
 			for _, asVar := range asVars {
 				info := analyzer.scope.Env.GetSymbol(asVar.name)
 				analyzer.srcTb()
-				analyzer.write(fmt.Sprintf("%s %s = %s.%s", info.NameSpace, asVar.dataType.GoTypePure(true), pkg, asVar.name), true)
+				if types.IsArr(info.DataType) {
+					elementType := asVar.dataType.GetInternal0()
+					analyzer.write(fmt.Sprintf("%s %s = %s(%s.%s)", info.NameSpace, asVar.dataType.ToGoType(), GetConstructor(elementType), pkg, asVar.name), true)
+				} else {
+					analyzer.write(fmt.Sprintf("%s %s = %s.%s", info.NameSpace, asVar.dataType.ToGoType(), pkg, asVar.name), true)
+				}
 			}
 			analyzer.decTb()
 			analyzer.write(")", false)
