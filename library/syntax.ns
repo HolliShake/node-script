@@ -1,6 +1,7 @@
 import ( Dog ) from "./test.ns";
 import ( Args ) from "go:os";
 import ( Println, Print ) from "go:fmt";
+import ( Time ) from "go:time";
 
 var DATA i32 = 100, TYPE str = "true", PascalTest i8 = 10;
 
@@ -41,7 +42,7 @@ define returnArr() [str] {
 }
 
 define returnErr() (bool, error) {
-
+    return true, null;
 }
 
 define main(args [str]) i32 {

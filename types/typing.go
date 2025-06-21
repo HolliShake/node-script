@@ -2,6 +2,7 @@ package types
 
 import (
 	"fmt"
+	"go/types"
 	"strings"
 )
 
@@ -36,6 +37,7 @@ const (
 )
 
 const (
+	GoByte    = "byte"
 	GoInt8    = "int8"
 	GoInt16   = "int16"
 	GoInt32   = "int32"
@@ -446,6 +448,28 @@ func TFunc(variadic bool, attributes []*TPair, returnType *TTyping, panics bool)
 	return typing
 }
 
+func TFromGoStruct(goType types.Type) *TTyping {
+	typing := CreateTyping("[OVERRIDEME]", TypeStruct)
+
+	// Members (from Struct)
+	if structType, ok := goType.Underlying().(*types.Struct); ok {
+		for i := 0; i < structType.NumFields(); i++ {
+			field := structType.Field(i)
+			typing.members = append(typing.members, CreatePair(field.Name(), TFromGo(field.Type().String())))
+		}
+	}
+
+	// Methods (from Named)
+	if namedType, ok := goType.(*types.Named); ok {
+		for i := 0; i < namedType.NumMethods(); i++ {
+			method := namedType.Method(i)
+			typing.methods = append(typing.methods, CreatePair(method.Name(), TFromGo(method.Type().String())))
+		}
+	}
+
+	return typing
+}
+
 func TFromGo(goType string) *TTyping {
 	switch goType {
 	case GoAny:
@@ -465,6 +489,8 @@ func TFromGo(goType string) *TTyping {
 	}
 
 	switch goType {
+	case GoByte:
+		return TInt08()
 	case GoInt8:
 		return TInt08()
 	case GoInt16:
@@ -527,11 +553,16 @@ func TFromGo(goType string) *TTyping {
 		}
 
 		for _, parameter := range parametersStr {
-			paramAndTypePairStr := strings.Split(strings.Trim(parameter, " "), " ")
-			if len(paramAndTypePairStr) != 2 {
-				panic("invalid parameter type (!= 2)")
+			if len(parameter) == 0 {
+				continue
 			}
-			ptype := TFromGo(paramAndTypePairStr[1])
+			paramAndTypePairStr := strings.Split(strings.Trim(parameter, " "), " ")
+			var ptype *TTyping = nil
+			if len(paramAndTypePairStr) == 1 {
+				ptype = TFromGo(paramAndTypePairStr[0])
+			} else if len(paramAndTypePairStr) == 2 {
+				ptype = TFromGo(paramAndTypePairStr[1])
+			}
 			if ptype == nil {
 				return nil
 			}
@@ -551,11 +582,16 @@ func TFromGo(goType string) *TTyping {
 			tupleElements := make([]*TTyping, 0)
 			tupleElementsStr := strings.Split(goReturn, ",")
 			for _, tupleElement := range tupleElementsStr {
-				paramAndTypePairStr := strings.Split(strings.Trim(tupleElement, " "), " ")
-				if len(paramAndTypePairStr) != 2 {
-					panic("invalid return type (!= 2)")
+				if len(tupleElement) == 0 {
+					continue
 				}
-				elementType := TFromGo(paramAndTypePairStr[1])
+				paramAndTypePairStr := strings.Split(strings.Trim(tupleElement, " "), " ")
+				var elementType *TTyping = nil
+				if len(paramAndTypePairStr) == 1 {
+					elementType = TFromGo(paramAndTypePairStr[0])
+				} else if len(paramAndTypePairStr) == 2 {
+					elementType = TFromGo(paramAndTypePairStr[1])
+				}
 				if elementType == nil {
 					return nil
 				}

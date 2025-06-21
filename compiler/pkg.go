@@ -76,3 +76,13 @@ func PackagesGetName(pkgs []*packages.Package, name string) types.Object {
 	}
 	return nil
 }
+
+func IsGoStruct(obj types.Type) bool {
+	switch obj.Underlying().(type) {
+	case *types.Struct:
+		return true
+	case *types.Named:
+		return true
+	}
+	return false
+}

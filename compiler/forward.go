@@ -541,8 +541,15 @@ func (f *TForward) forwardImport(fileJob TFileJob, node *TAst) {
 				symbol := PackagesGetName(packages, nameNode.Str0)
 				symbolType := symbol.Type()
 
-				types := types.TFromGo(symbolType.String())
-				if types == nil {
+				var convertedType *types.TTyping = nil
+
+				if IsGoStruct(symbolType) {
+					convertedType = types.TFromGoStruct(symbolType)
+				} else {
+					convertedType = types.TFromGo(symbolType.String())
+				}
+
+				if convertedType == nil {
 					RaiseLanguageCompileError(
 						fileJob.Path,
 						fileJob.Data,
@@ -555,7 +562,7 @@ func (f *TForward) forwardImport(fileJob TFileJob, node *TAst) {
 					Name:         nameNode.Str0,
 					NameSpace:    JoinVariableName(GetFileNameWithoutExtension(fileJob.Path), nameNode.Str0),
 					Module:       GetFileNameWithoutExtension(fileJob.Path),
-					DataType:     types,
+					DataType:     convertedType,
 					Position:     nameNode.Position,
 					IsGlobal:     true,
 					IsConst:      true,

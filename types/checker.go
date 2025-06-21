@@ -161,6 +161,10 @@ func CanStore(dst *TTyping, src *TTyping) bool {
 	if IsVoid(dst) && IsVoid(src) {
 		return true
 	}
+	if IsError(dst) && (IsVoid(src) ||
+		IsError(src)) {
+		return true
+	}
 	if IsTheSameInstance(dst, src) {
 		return true
 	}

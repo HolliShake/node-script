@@ -1323,7 +1323,7 @@ func (analyzer *TAnalyzer) visitDefine(node *TAst) {
 		RaiseLanguageCompileError(
 			analyzer.file.Path,
 			analyzer.file.Data,
-			fmt.Sprintf("cannot return %s, return type must be %s", functionScope.Return.ToGoType(), returnType.ToGoType()),
+			fmt.Sprintf("cannot return %s, return type must be %s", functionScope.Return.ToString(), returnType.ToString()),
 			node.Position,
 		)
 	}
@@ -1422,9 +1422,15 @@ func (analyzer *TAnalyzer) visitImport(node *TAst) {
 		// Make sure this was handled by Forwarder
 		pkg := pathNode.Str0[3:]
 		analyzer.addModule(fmt.Sprintf("\"%s\"", pkg))
-		analyzer.write("var", false)
-		analyzer.write("(", true)
-		analyzer.incTb()
+		asTypes := make([]struct {
+			dataType *types.TTyping
+			name     string
+		}, 0)
+		asVars := make([]struct {
+			dataType *types.TTyping
+			name     string
+		}, 0)
+
 		for _, nameNode := range namesNode {
 			if nameNode.Ttype != AstIDN {
 				RaiseLanguageCompileError(
@@ -1443,11 +1449,48 @@ func (analyzer *TAnalyzer) visitImport(node *TAst) {
 				)
 			}
 			symbol := analyzer.scope.Env.GetSymbol(nameNode.Str0)
-			analyzer.srcTb()
-			analyzer.write(fmt.Sprintf("%s %s = %s.%s", symbol.NameSpace, symbol.DataType.GoTypePure(true), pkg, nameNode.Str0), true)
+			if types.IsStruct(symbol.DataType) {
+				asTypes = append(asTypes, struct {
+					dataType *types.TTyping
+					name     string
+				}{
+					dataType: symbol.DataType,
+					name:     nameNode.Str0,
+				})
+			} else {
+				asVars = append(asVars, struct {
+					dataType *types.TTyping
+					name     string
+				}{
+					dataType: symbol.DataType,
+					name:     nameNode.Str0,
+				})
+			}
 		}
-		analyzer.decTb()
-		analyzer.write(")", false)
+
+		if len(asTypes) > 0 {
+			for _, asType := range asTypes {
+				info := analyzer.scope.Env.GetSymbol(asType.name)
+				analyzer.write("type", false)
+				analyzer.write(" ", false)
+				analyzer.write(info.NameSpace, false)
+				analyzer.write(" ", false)
+				analyzer.write(fmt.Sprintf("%s.%s", pkg, asType.name), true)
+			}
+		}
+
+		if len(asVars) > 0 {
+			analyzer.write("var", false)
+			analyzer.write("(", true)
+			analyzer.incTb()
+			for _, asVar := range asVars {
+				info := analyzer.scope.Env.GetSymbol(asVar.name)
+				analyzer.srcTb()
+				analyzer.write(fmt.Sprintf("%s %s = %s.%s", info.NameSpace, asVar.dataType.GoTypePure(true), pkg, asVar.name), true)
+			}
+			analyzer.decTb()
+			analyzer.write(")", false)
+		}
 		return
 	}
 
