@@ -41,7 +41,7 @@ define returnArr() [str] {
 }
 
 define returnErr() (bool, error) {
-    
+
 }
 
 define main(args [str]) i32 {
@@ -62,6 +62,7 @@ define main(args [str]) i32 {
     println(arr.Pop());
     run toNewThread();
     Println("Hello, from Go mix!!");
-    returnErr();
+    x, y := returnErr();
+    Println(x, y);
     return 100;
 }
