@@ -1,6 +1,6 @@
 module compiler
 
-go 1.24.2
+go 1.24.3
 
 require (
 	dev/types v0.0.1

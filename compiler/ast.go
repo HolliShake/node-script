@@ -165,6 +165,14 @@ func AstSingleWithArray(ttype AstType, position TPosition, Ast0 *TAst, AstArr0 [
 	return ast
 }
 
+func AstSingleWithDoubleArray(ttype AstType, position TPosition, Ast0 *TAst, AstArr0 []*TAst, AstArr1 []*TAst) *TAst {
+	ast := CreateAst(ttype, position)
+	ast.Ast0 = Ast0
+	ast.AstArr0 = AstArr0
+	ast.AstArr1 = AstArr1
+	return ast
+}
+
 // Custom AST functions for specific constructs
 
 func AstPostfix(ttype AstType, position TPosition, Ast0 *TAst, opt string) *TAst {

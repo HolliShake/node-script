@@ -65,5 +65,8 @@ define main(args [str]) i32 {
     Println("Hello, from Go mix!!");
     x, y := returnErr();
     Println(x, y);
+    p := Person {
+        Name: "Philipp Andrew"
+    };
     return 100;
 }

@@ -260,6 +260,74 @@ func (parser *TParser) memberOrCall() *TAst {
 	return node
 }
 
+func (parser *TParser) structExpression() *TAst {
+	node := parser.memberOrCall()
+	if node == nil {
+		return nil
+	}
+
+	if !parser.matchV("{") {
+		return node
+	}
+
+	start := node.Position
+	ended := start
+
+	parser.acceptV("{")
+	var name *TAst = nil
+	var value *TAst = nil
+	names := make([]*TAst, 0)
+	values := make([]*TAst, 0)
+	if parser.matchT(TokenIDN) {
+		name = parser.terminal()
+		parser.acceptV(":")
+		value = parser.expression()
+		if value == nil {
+			RaiseLanguageCompileError(
+				parser.Tokenizer.File,
+				parser.Tokenizer.Data,
+				"missing value",
+				parser.look.Position,
+			)
+		}
+		names = append(names, name)
+		values = append(values, value)
+		for parser.matchV(",") {
+			parser.acceptV(",")
+			name = parser.terminal()
+			if name == nil {
+				RaiseLanguageCompileError(
+					parser.Tokenizer.File,
+					parser.Tokenizer.Data,
+					"missing name",
+					parser.look.Position,
+				)
+			}
+			parser.acceptV(":")
+			value = parser.expression()
+			if value == nil {
+				RaiseLanguageCompileError(
+					parser.Tokenizer.File,
+					parser.Tokenizer.Data,
+					"missing value",
+					parser.look.Position,
+				)
+			}
+			names = append(names, name)
+			values = append(values, value)
+		}
+	}
+	ended = parser.look.Position
+	parser.acceptV("}")
+	return AstSingleWithDoubleArray(
+		AstStruct,
+		start.Merge(ended),
+		node,
+		names,
+		values,
+	)
+}
+
 func (parser *TParser) ifExpression() *TAst {
 	if parser.matchV(KeyIf) {
 		start := parser.look.Position
@@ -295,7 +363,7 @@ func (parser *TParser) ifExpression() *TAst {
 			body,
 		)
 	}
-	return parser.memberOrCall()
+	return parser.structExpression()
 }
 
 func (parser *TParser) unary() *TAst {
