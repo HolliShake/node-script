@@ -87,6 +87,7 @@ func (analyzer *TAnalyzer) getType(node *TAst) *types.TTyping {
 			}
 			return symbol.DataType
 		}
+		panic("not implemented")
 	case AstTypeInt8:
 		return analyzer.state.TI08
 	case AstTypeInt16:
@@ -412,8 +413,8 @@ func (analyzer *TAnalyzer) expression(node *TAst) {
 				)
 			}
 			analyzer.write(".", false)
-			analyzer.write(member_name.Str0, false)
 			method := member_obj_value.DataType.GetMethod(member_name.Str0)
+			analyzer.write(method.Namespace, false)
 			analyzer.stack.Push(CreateValue(
 				method.DataType,
 				nil,
@@ -1496,7 +1497,7 @@ func (analyzer *TAnalyzer) visitDefine(node *TAst) {
 			RaiseLanguageCompileError(
 				analyzer.file.Path,
 				analyzer.file.Data,
-				"method already exists",
+				fmt.Sprintf("method '%s' already exists for type %s", nameNode.Str0, thisArgType.ToString()),
 				nameNode.Position,
 			)
 		}

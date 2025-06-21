@@ -97,6 +97,8 @@ type TTyping struct {
 	variadic       bool       // Function variadic
 	panics         bool       // Function panics
 	hasConstructor bool
+	instance0      *TTyping // Instance of this type
+	instance1      *TTyping // Instance of this type
 }
 
 func (t *TTyping) Variadic() bool {
@@ -178,8 +180,7 @@ func (t *TTyping) GetMethods() []*TPair {
 }
 
 func (t *TTyping) AddMethod(name string, namespace string, dataType *TTyping) {
-	pair := CreatePairWithNamespace(name, namespace, dataType)
-	t.methods = append(t.methods, pair)
+	t.methods = append(t.methods, CreatePairWithNamespace(name, namespace, dataType))
 }
 
 func CreateTyping(repr string, size TypeCode) *TTyping {
@@ -188,9 +189,11 @@ func CreateTyping(repr string, size TypeCode) *TTyping {
 	typing.typeId = size
 	typing.internal0 = nil
 	typing.internal1 = nil
-	typing.members = nil
+	typing.members = make([]*TPair, 0)
 	typing.methods = make([]*TPair, 0)
 	typing.hasConstructor = false
+	typing.instance0 = nil
+	typing.instance1 = nil
 	return typing
 }
 
@@ -245,23 +248,23 @@ func TArray(element *TTyping) *TTyping {
 	typing.internal0 = element
 
 	// Push method
-	push_method := CreatePair("Push", TFunc(false, []*TPair{CreatePair("value", element)}, TVoid(), false))
+	push_method := CreatePairWithNamespace("Push", "Push", TFunc(false, []*TPair{CreatePair("value", element)}, TVoid(), false))
 	typing.methods = append(typing.methods, push_method)
 
 	// Pop method
-	pop_method := CreatePair("Pop", TFunc(false, []*TPair{}, element, false))
+	pop_method := CreatePairWithNamespace("Pop", "Pop", TFunc(false, []*TPair{}, element, false))
 	typing.methods = append(typing.methods, pop_method)
 
 	// Length method
-	length_method := CreatePair("Length", TFunc(false, []*TPair{}, TInt64(), false))
+	length_method := CreatePairWithNamespace("Length", "Length", TFunc(false, []*TPair{}, TInt64(), false))
 	typing.methods = append(typing.methods, length_method)
 
 	// Get method
-	get_method := CreatePair("Get", TFunc(false, []*TPair{CreatePair("index", TInt64())}, element, false))
+	get_method := CreatePairWithNamespace("Get", "Get", TFunc(false, []*TPair{CreatePair("index", TInt64())}, element, false))
 	typing.methods = append(typing.methods, get_method)
 
 	// Set method
-	set_method := CreatePair("Set", TFunc(false, []*TPair{CreatePair("index", TInt64()), CreatePair("value", element)}, TVoid(), false))
+	set_method := CreatePairWithNamespace("Set", "Set", TFunc(false, []*TPair{CreatePair("index", TInt64()), CreatePair("value", element)}, TVoid(), false))
 	typing.methods = append(typing.methods, set_method)
 
 	return typing
@@ -465,36 +468,36 @@ func ToInstance(typing *TTyping) *TTyping {
 	if !IsStruct(typing) {
 		panic("invalid type or not implemented")
 	}
-	ins := &TTyping{
-		repr:           typing.repr,
-		typeId:         TypeStructInstance,
-		internal0:      nil,
-		internal1:      nil,
-		elements:       nil,
-		members:        typing.members,
-		methods:        typing.methods,
-		variadic:       false,
-		panics:         false,
-		hasConstructor: typing.hasConstructor,
+	if typing.instance0 != nil {
+		return typing.instance0
 	}
-	return ins
+	typing.instance0 = CreateTyping(typing.repr, TypeStructInstance)
+	typing.instance0.internal0 = typing
+	typing.instance0.internal1 = nil
+	typing.instance0.elements = nil
+	typing.instance0.methods = typing.methods
+	typing.instance0.members = typing.members
+	typing.instance0.variadic = false
+	typing.instance0.panics = false
+	typing.instance0.hasConstructor = typing.hasConstructor
+	return typing.instance0
 }
 
 // For new struct heap object
 func ToPointer(typing *TTyping) *TTyping {
-	ins := &TTyping{
-		repr:           typing.repr,
-		typeId:         typing.typeId | MASK,
-		internal0:      typing,
-		internal1:      nil,
-		elements:       nil,
-		members:        typing.members,
-		methods:        typing.methods,
-		variadic:       false,
-		panics:         false,
-		hasConstructor: typing.hasConstructor,
+	if typing.instance1 != nil {
+		return typing.instance1
 	}
-	return ins
+	typing.instance1 = CreateTyping(typing.repr, typing.typeId|MASK)
+	typing.instance1.internal0 = typing
+	typing.instance1.internal1 = nil
+	typing.instance1.elements = nil
+	typing.instance1.methods = typing.methods
+	typing.instance1.members = typing.members
+	typing.instance1.variadic = false
+	typing.instance1.panics = false
+	typing.instance1.hasConstructor = typing.hasConstructor
+	return typing.instance1
 }
 
 func WhichBigger(a *TTyping, b *TTyping) *TTyping {

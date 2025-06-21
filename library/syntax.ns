@@ -11,6 +11,11 @@ struct Person {
     Pet  Dog;
 }
 
+
+define (p Person) GetName() str {
+    return p.Name;
+}
+
 struct King {
     Name str;
     Age  i32;
@@ -69,9 +74,9 @@ define main(args [str]) i32 {
         Name: "Philipp Andrew"
     };
     println(p);
-    local t Time = Time{};
+
     local intptr i32* = null;
     println(intptr);
-    Println(t);
+    Println(p.Name, p.GetName());
     return 100;
 }

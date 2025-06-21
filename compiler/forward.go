@@ -212,6 +212,7 @@ func (f *TForward) getType(fileJob TFileJob, node *TAst) *types.TTyping {
 			}
 			return symbol.DataType
 		}
+		return nil
 	case AstTypeInt8:
 		return f.State.TI08
 	case AstTypeInt16:
@@ -304,6 +305,18 @@ func (f *TForward) getType(fileJob TFileJob, node *TAst) *types.TTyping {
 			)
 		}
 		return types.TArray(elementType)
+	case AstTypePointer:
+		elementAst := node.Ast0
+		elementType := f.getType(fileJob, elementAst)
+		if elementType == nil {
+			f.pushMissingTypes(TMissingTypeJob{
+				file:    fileJob,
+				NameAst: elementAst, // For this time, Pass the valAst here.
+				TypeAst: elementAst,
+			})
+			return nil
+		}
+		return types.ToPointer(elementType)
 	}
 	return nil
 }
@@ -856,8 +869,6 @@ func ForwardDeclairation(state *TState, path string, data []rune, ast *TAst) []T
 		IsDone: false,
 		IsMain: true,
 	}
-	// Push the file
-	forward.pushFile(job)
 	// Forward the file
 	forward.forward(job)
 	// Build the file
