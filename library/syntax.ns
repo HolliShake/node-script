@@ -65,9 +65,13 @@ define main(args [str]) i32 {
     Println("Hello, from Go mix!!");
     x, y := returnErr();
     Println(x, y);
-    p := Person {
+    local p Person* = new Person {
         Name: "Philipp Andrew"
     };
     println(p);
+    local t Time = Time{
+
+    };
+    Println(t);
     return 100;
 }

@@ -61,6 +61,7 @@ var Keywords = []string{
 	KeyTrue,
 	KeyFalse,
 	KeyNull,
+	KeyNew,
 	KeyInt8,
 	KeyInt16,
 	KeyInt32,

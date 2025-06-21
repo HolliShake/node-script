@@ -1,13 +1,17 @@
 package types
 
 import (
-	"fmt"
 	"go/types"
 	"strings"
 )
 
+// ===================================
+//        Builtin TypeCode           //
+// ===================================
+
 type TypeCode int
 
+const MASK TypeCode = 0xdeadbeef
 const (
 	TypeAny TypeCode = 1 << iota
 	TypeI08
@@ -22,9 +26,20 @@ const (
 	TypeArr
 	TypeMap
 	TypeStruct
+	TypeStructInstance
 	TypeFunc
 	TypeTuple
 )
+
+const (
+	TypeStructHeapInstance TypeCode = TypeStructInstance | MASK
+)
+
+// ============== END ================
+
+// ===================================
+//        Builtin GoType             //
+// ===================================
 
 const (
 	GoAny = "any"
@@ -51,6 +66,8 @@ const (
 	GoFloat64 = "float64"
 )
 
+// ============== END ================
+
 type TPair struct {
 	Name      string
 	Namespace string
@@ -74,23 +91,28 @@ func CreatePairWithNamespace(name string, namespace string, dataType *TTyping) *
 }
 
 type TTyping struct {
-	repr      string
-	typeId    TypeCode
-	internal0 *TTyping   // Array element | Map key
-	internal1 *TTyping   // Map value
-	elements  []*TTyping // Tuple elements
-	members   []*TPair   // Struct attribute | Function parameter
-	methods   []*TPair   // Type methods
-	variadic  bool       // Function variadic
-	panics    bool       // Function panics
+	repr           string
+	typeId         TypeCode
+	internal0      *TTyping   // Array element | Map key
+	internal1      *TTyping   // Map value
+	elements       []*TTyping // Tuple elements
+	members        []*TPair   // Struct attribute | Function parameter
+	methods        []*TPair   // Type methods
+	variadic       bool       // Function variadic
+	panics         bool       // Function panics
+	hasConstructor bool
+}
+
+func (t *TTyping) Variadic() bool {
+	return t.variadic
 }
 
 func (t *TTyping) Panics() bool {
 	return t.panics
 }
 
-func (t *TTyping) Variadic() bool {
-	return t.variadic
+func (t *TTyping) HasConstructor() bool {
+	return t.hasConstructor
 }
 
 func (t *TTyping) GetInternal0() *TTyping {
@@ -164,178 +186,6 @@ func (t *TTyping) AddMethod(name string, namespace string, dataType *TTyping) {
 	t.methods = append(t.methods, pair)
 }
 
-func (t *TTyping) DefaultValue() string {
-	switch t.typeId {
-	case TypeI08,
-		TypeI16,
-		TypeI32,
-		TypeI64,
-		TypeNum:
-		return "0"
-	case TypeStr:
-		return "\"\""
-	case TypeBit:
-		return "false"
-	case TypeNil:
-		return ""
-	case TypeErr:
-		return "nil"
-	case TypeTuple:
-		elements := make([]string, len(t.elements))
-		for i, element := range t.elements {
-			elements[i] = element.DefaultValue()
-		}
-		return strings.Join(elements, ", ")
-	case TypeArr:
-		return fmt.Sprintf("NewArray%s([]%s{})", t.internal0.ToNormalName(), t.internal0.ToGoType())
-	case TypeMap:
-		return fmt.Sprintf("make(map[%s]%s)", t.internal0.ToGoType(), t.internal1.ToGoType())
-	case TypeFunc:
-		panic("invalid type or not implemented")
-	case TypeStruct:
-		return t.repr + "{}"
-	default:
-		panic("invalid type or not implemented")
-	}
-}
-func (t *TTyping) ToString() string {
-	switch t.typeId {
-	case TypeAny,
-		TypeI08,
-		TypeI16,
-		TypeI32,
-		TypeI64,
-		TypeNum,
-		TypeStr,
-		TypeBit,
-		TypeNil,
-		TypeErr:
-		return t.repr
-	case TypeTuple:
-		elements := make([]string, len(t.elements))
-		for i, element := range t.elements {
-			elements[i] = element.ToString()
-		}
-		return "(" + strings.Join(elements, ", ") + ")"
-	case TypeArr:
-		return "[" + t.internal0.ToString() + "]"
-	case TypeMap:
-		return "map[" + t.internal0.ToString() + ":" + t.internal1.ToString() + "]"
-	case TypeFunc:
-		parameters := make([]string, len(t.members))
-		for i, parameter := range t.members {
-			parameters[i] = parameter.DataType.ToString()
-		}
-		returnType := t.internal0.ToString()
-		str := fmt.Sprintf("func(%s) %s", strings.Join(parameters, ","), returnType)
-		if t.panics {
-			str = str + " panics"
-		}
-		return str
-	// TODO: Add other types
-	case TypeStruct:
-		return t.repr
-	default:
-		panic("invalid type or not implemented")
-	}
-}
-
-func (t *TTyping) GoTypePure(pure bool) string {
-	switch t.typeId {
-	case TypeAny:
-		return GoAny
-	case TypeI08,
-		TypeI16,
-		TypeI32,
-		TypeI64:
-		return GoInt
-	case TypeNum:
-		return GoFlt
-	case TypeStr:
-		return GoStr
-	case TypeBit:
-		return GoBit
-	case TypeNil:
-		return GoNil
-	case TypeErr:
-		return GoErr
-	case TypeTuple:
-		elements := make([]string, len(t.elements))
-		for i, element := range t.elements {
-			elements[i] = element.GoTypePure(pure)
-		}
-		return "(" + strings.Join(elements, ", ") + ")"
-	case TypeArr:
-		if pure {
-			return "[]" + t.internal0.GoTypePure(pure)
-		}
-		return "*Array" + t.internal0.ToNormalName()
-	case TypeMap:
-		return "map[" + t.internal0.GoTypePure(pure) + "]" + t.internal1.GoTypePure(pure)
-	case TypeFunc:
-		returnType := t.internal0.GoTypePure(pure)
-		parameters := make([]string, len(t.members))
-		for i, parameter := range t.members {
-			parameters[i] = parameter.Name
-			if i == len(t.members)-1 && t.variadic {
-				parameters[i] = parameters[i] + "..."
-			}
-			parameters[i] = parameters[i] + parameter.DataType.GoTypePure(pure)
-		}
-		return fmt.Sprintf("func(%s) %s", strings.Join(parameters, ","), returnType)
-	case TypeStruct:
-		return t.repr
-	default:
-		panic("invalid type or not implemented")
-	}
-}
-
-func (t *TTyping) ToGoType() string {
-	return t.GoTypePure(false)
-}
-
-func (t *TTyping) ToNormalName() string {
-	switch t.typeId {
-	case TypeAny,
-		TypeI08,
-		TypeI16,
-		TypeI32,
-		TypeI64,
-		TypeNum,
-		TypeStr,
-		TypeBit,
-		TypeNil,
-		TypeErr:
-		return t.ToGoType()
-	case TypeTuple:
-		elements_normal_name := ""
-		for i, element := range t.elements {
-			elements_normal_name += element.ToNormalName()
-			if i < len(t.elements)-1 {
-				elements_normal_name += "_"
-			}
-		}
-		return "Tuple_" + elements_normal_name
-	case TypeArr:
-		return "Array_" + t.internal0.ToNormalName()
-	case TypeMap:
-		return "Map_" + t.internal0.ToNormalName() + "_" + t.internal1.ToNormalName()
-	case TypeFunc:
-		parameters_normal_name := ""
-		for i, parameter := range t.members {
-			parameters_normal_name += parameter.DataType.ToNormalName()
-			if i < len(t.members)-1 {
-				parameters_normal_name += "_"
-			}
-		}
-		return "func" + "_" + t.internal0.ToNormalName() + "_" + parameters_normal_name
-	case TypeStruct:
-		return t.repr
-	default:
-		panic("invalid type or not implemented")
-	}
-}
-
 func CreateTyping(repr string, size TypeCode) *TTyping {
 	typing := new(TTyping)
 	typing.repr = repr
@@ -344,6 +194,7 @@ func CreateTyping(repr string, size TypeCode) *TTyping {
 	typing.internal1 = nil
 	typing.members = nil
 	typing.methods = make([]*TPair, 0)
+	typing.hasConstructor = false
 	return typing
 }
 
@@ -435,6 +286,7 @@ func THashMap(key *TTyping, val *TTyping) *TTyping {
 
 func TStruct(name string, attributes []*TPair) *TTyping {
 	typing := CreateTyping(name, TypeStruct)
+	typing.hasConstructor = true // Struct has constructor, if it was defined by user and not from go
 	typing.members = attributes
 	return typing
 }
@@ -448,8 +300,9 @@ func TFunc(variadic bool, attributes []*TPair, returnType *TTyping, panics bool)
 	return typing
 }
 
-func TFromGoStruct(goType types.Type) *TTyping {
-	typing := CreateTyping("[OVERRIDEME]", TypeStruct)
+func TFromGoStruct(namespace string, goType types.Type) *TTyping {
+	typing := CreateTyping(namespace, TypeStruct)
+	typing.hasConstructor = false // Struct has no constructor, if it was not defined by user
 
 	// Members (from Struct)
 	if structType, ok := goType.Underlying().(*types.Struct); ok {
@@ -610,6 +463,42 @@ func TFromGo(goType string) *TTyping {
 	}
 
 	return nil
+}
+
+func ToInstance(typing *TTyping) *TTyping {
+	if !IsStruct(typing) {
+		panic("invalid type or not implemented")
+	}
+	ins := &TTyping{
+		repr:           typing.repr,
+		typeId:         TypeStructInstance,
+		internal0:      nil,
+		internal1:      nil,
+		elements:       nil,
+		members:        typing.members,
+		methods:        typing.methods,
+		variadic:       false,
+		panics:         false,
+		hasConstructor: typing.hasConstructor,
+	}
+	return ins
+}
+
+// For new struct heap object
+func ToHeapInstance(typing *TTyping) *TTyping {
+	ins := &TTyping{
+		repr:           typing.repr,
+		typeId:         typing.typeId | MASK,
+		internal0:      nil,
+		internal1:      nil,
+		elements:       nil,
+		members:        typing.members,
+		methods:        typing.methods,
+		variadic:       false,
+		panics:         false,
+		hasConstructor: typing.hasConstructor,
+	}
+	return ins
 }
 
 func WhichBigger(a *TTyping, b *TTyping) *TTyping {

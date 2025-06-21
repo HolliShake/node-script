@@ -82,6 +82,9 @@ func (analyzer *TAnalyzer) getType(node *TAst) *types.TTyping {
 		if analyzer.file.Env.HasGlobalSymbol(node.Str0) {
 			symbol := analyzer.file.Env.GetSymbol(node.Str0)
 			analyzer.file.Env.UpdateSymbolIsUsed(node.Str0, true)
+			if types.IsStruct(symbol.DataType) {
+				return types.ToInstance(symbol.DataType)
+			}
 			return symbol.DataType
 		}
 	case AstTypeInt8:
@@ -162,6 +165,18 @@ func (analyzer *TAnalyzer) getType(node *TAst) *types.TTyping {
 			)
 		}
 		return types.THashMap(keyType, valType)
+	case AstTypePointer:
+		elementAst := node.Ast0
+		elementType := analyzer.getType(elementAst)
+		if elementType == nil {
+			RaiseLanguageCompileError(
+				analyzer.file.Path,
+				analyzer.file.Data,
+				"invalid pointer element type",
+				elementAst.Position,
+			)
+		}
+		return types.ToHeapInstance(elementType)
 	default:
 		RaiseLanguageCompileError(
 			analyzer.file.Path,
@@ -187,6 +202,15 @@ func (analyzer *TAnalyzer) expression(node *TAst) {
 		symbol := analyzer.scope.Env.GetSymbol(node.Str0)
 		analyzer.scope.Env.UpdateSymbolIsUsed(node.Str0, true)
 		analyzer.write(symbol.NameSpace, false)
+		// Struct cannot be used as a value.
+		if types.IsStruct(symbol.DataType) {
+			RaiseLanguageCompileError(
+				analyzer.file.Path,
+				analyzer.file.Data,
+				fmt.Sprintf("struct %s cannot be used as a value", symbol.DataType.ToString()),
+				node.Position,
+			)
+		}
 		analyzer.stack.Push(CreateValue(
 			symbol.DataType,
 			nil,
@@ -525,6 +549,14 @@ func (analyzer *TAnalyzer) expression(node *TAst) {
 		}
 		objectInfo := analyzer.scope.Env.GetSymbol(objectNode.Str0)
 		objDataType := objectInfo.DataType
+		if !types.IsStruct(objDataType) {
+			RaiseLanguageCompileError(
+				analyzer.file.Path,
+				analyzer.file.Data,
+				fmt.Sprintf("struct %s is not a struct", objectNode.Str0),
+				objectNode.Position,
+			)
+		}
 		analyzer.write(objectInfo.NameSpace, false)
 		analyzer.write(" ", false)
 		analyzer.write("{", false)
@@ -564,7 +596,39 @@ func (analyzer *TAnalyzer) expression(node *TAst) {
 		}
 		analyzer.write("}", false)
 		analyzer.stack.Push(CreateValue(
-			objDataType,
+			types.ToInstance(objDataType),
+			nil,
+		))
+	case AstAllocation:
+		objectNode := node.Ast0
+		src := analyzer.src
+		analyzer.src = ""
+		analyzer.expression(objectNode)
+		value := analyzer.stack.Pop()
+		if !types.IsStructInstance(value.DataType) {
+			RaiseLanguageCompileError(
+				analyzer.file.Path,
+				analyzer.file.Data,
+				"allocation expression must be a struct",
+				objectNode.Position,
+			)
+		}
+		analyzer.src = src
+		if !value.DataType.HasConstructor() {
+			RaiseLanguageCompileError(
+				analyzer.file.Path,
+				analyzer.file.Data,
+				"struct has no constructor",
+				objectNode.Position,
+			)
+		}
+		analyzer.write(fmt.Sprintf("new_%s", value.DataType.GoTypePure(true)), false)
+		analyzer.write("(", false)
+		analyzer.expression(objectNode)
+		analyzer.stack.Pop()
+		analyzer.write(")", false)
+		analyzer.stack.Push(CreateValue(
+			types.ToHeapInstance(value.DataType),
 			nil,
 		))
 	case AstMul:
@@ -1242,6 +1306,20 @@ func (analyzer *TAnalyzer) visitStruct(node *TAst) {
 	analyzer.srcNl()
 	analyzer.write("}", false)
 	analyzer.scope = analyzer.scope.Parent
+
+	// Create a constructor for the struct
+	analyzer.srcNl()
+	analyzer.write(fmt.Sprintf("func new_%s(instance %s) *%s", structName, structName, structName), false)
+	analyzer.srcSp()
+	analyzer.write("{", true)
+	analyzer.incTb()
+	analyzer.write(fmt.Sprintf("newInstance := new(%s)", structName), true)
+	for _, attrNode := range namesNode {
+		analyzer.write(fmt.Sprintf("newInstance.%s = instance.%s", attrNode.Str0, attrNode.Str0), true)
+	}
+	analyzer.write("return newInstance", true)
+	analyzer.decTb()
+	analyzer.write("}", false)
 }
 
 func (analyzer *TAnalyzer) visitDefine(node *TAst) {

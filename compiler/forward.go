@@ -207,6 +207,9 @@ func (f *TForward) getType(fileJob TFileJob, node *TAst) *types.TTyping {
 		if fileJob.Env.HasLocalSymbol(node.Str0) {
 			symbol := fileJob.Env.GetSymbol(node.Str0)
 			(&symbol).IsUsed = true
+			if types.IsStruct(symbol.DataType) {
+				return types.ToInstance(symbol.DataType)
+			}
 			return symbol.DataType
 		}
 	case AstTypeInt8:
@@ -544,7 +547,7 @@ func (f *TForward) forwardImport(fileJob TFileJob, node *TAst) {
 				var convertedType *types.TTyping = nil
 
 				if IsGoStruct(symbolType) {
-					convertedType = types.TFromGoStruct(symbolType)
+					convertedType = types.TFromGoStruct(JoinVariableName(GetFileNameWithoutExtension(fileJob.Path), nameNode.Str0), symbolType)
 				} else {
 					convertedType = types.TFromGo(symbolType.String())
 				}
@@ -853,8 +856,11 @@ func ForwardDeclairation(state *TState, path string, data []rune, ast *TAst) []T
 		IsDone: false,
 		IsMain: true,
 	}
+	// Push the file
+	forward.pushFile(job)
 	// Forward the file
 	forward.forward(job)
+	// Build the file
 	forward.build()
 	// Make the file unique
 	forward.makeUniqueFile()

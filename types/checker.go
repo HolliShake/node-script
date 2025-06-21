@@ -67,6 +67,10 @@ func IsStruct(ttype *TTyping) bool {
 	return ttype.typeId == TypeStruct
 }
 
+func IsStructInstance(ttype *TTyping) bool {
+	return ttype.typeId == TypeStructInstance
+}
+
 func IsFunc(ttype *TTyping) bool {
 	return ttype.typeId == TypeFunc
 }
