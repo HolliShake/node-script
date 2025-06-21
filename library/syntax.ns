@@ -69,9 +69,9 @@ define main(args [str]) i32 {
         Name: "Philipp Andrew"
     };
     println(p);
-    local t Time = Time{
-
-    };
+    local t Time = Time{};
+    local intptr i32* = null;
+    println(intptr);
     Println(t);
     return 100;
 }

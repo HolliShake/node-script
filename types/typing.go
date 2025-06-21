@@ -11,7 +11,6 @@ import (
 
 type TypeCode int
 
-const MASK TypeCode = 0xdeadbeef
 const (
 	TypeAny TypeCode = 1 << iota
 	TypeI08
@@ -29,10 +28,7 @@ const (
 	TypeStructInstance
 	TypeFunc
 	TypeTuple
-)
-
-const (
-	TypeStructHeapInstance TypeCode = TypeStructInstance | MASK
+	MASK
 )
 
 // ============== END ================
@@ -485,11 +481,11 @@ func ToInstance(typing *TTyping) *TTyping {
 }
 
 // For new struct heap object
-func ToHeapInstance(typing *TTyping) *TTyping {
+func ToPointer(typing *TTyping) *TTyping {
 	ins := &TTyping{
 		repr:           typing.repr,
 		typeId:         typing.typeId | MASK,
-		internal0:      nil,
+		internal0:      typing,
 		internal1:      nil,
 		elements:       nil,
 		members:        typing.members,

@@ -226,10 +226,10 @@ func (f *TForward) getType(fileJob TFileJob, node *TAst) *types.TTyping {
 		return f.State.TStr
 	case AstTypeBool:
 		return f.State.TBit
-	case AstTypeVoid:
-		return f.State.TNil
 	case AstTypeError:
 		return f.State.TErr
+	case AstTypeVoid:
+		return f.State.TVoid
 	case AstTypeTuple:
 		elementTypes := make([]*types.TTyping, 0)
 		for _, elementAst := range node.AstArr0 {

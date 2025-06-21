@@ -36,10 +36,10 @@ func (t *TTyping) DefaultValue() string {
 	case TypeStruct,
 		TypeStructInstance:
 		return t.repr + "{}"
-	case TypeStructHeapInstance,
-		(t.typeId & MASK):
-		return "nil"
 	default:
+		if t.typeId&MASK != 0 {
+			return "nil"
+		}
 		panic("invalid type or not implemented")
 	}
 }
@@ -81,11 +81,10 @@ func (t *TTyping) ToString() string {
 		return "type" + "<" + "struct" + " " + t.repr + "{}" + ">"
 	case TypeStructInstance:
 		return t.repr + "{}"
-	case TypeStructHeapInstance:
-		return t.repr + "*" + " " + "{}"
-	case (t.typeId & MASK):
-		return t.repr + "*"
 	default:
+		if t.typeId&MASK != 0 {
+			return t.internal0.ToString() + "*"
+		}
 		panic("invalid type or not implemented")
 	}
 }
@@ -136,11 +135,10 @@ func (t *TTyping) GoTypePure(pure bool) string {
 	case TypeStruct,
 		TypeStructInstance:
 		return t.repr
-	case TypeStructHeapInstance:
-		return "*" + t.repr
-	case (t.typeId & MASK):
-		return "*" + t.repr
 	default:
+		if t.typeId&MASK != 0 {
+			return "*" + t.internal0.GoTypePure(pure)
+		}
 		panic("invalid type or not implemented")
 	}
 }
@@ -187,10 +185,10 @@ func (t *TTyping) ToNormalName() string {
 	case TypeStruct,
 		TypeStructInstance:
 		return t.repr
-	case TypeStructHeapInstance,
-		(t.typeId & MASK):
-		return t.repr + "_" + "ptr"
 	default:
+		if t.typeId&MASK != 0 {
+			return t.internal0.ToNormalName() + "_" + "ptr"
+		}
 		panic("invalid type or not implemented")
 	}
 }

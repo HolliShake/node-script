@@ -86,6 +86,14 @@ func IsTheSameInstance(ttype1 *TTyping, ttype2 *TTyping) bool {
 	return ttype1.ToGoType() == ttype2.ToGoType()
 }
 
+func IsPointer(ttype *TTyping) bool {
+	return ttype.typeId&MASK != 0
+}
+
+func IsVoidPointer(ttype *TTyping) bool {
+	return IsPointer(ttype) && ttype.typeId&TypeNil == TypeNil
+}
+
 func IsValidKey(ttype *TTyping) bool {
 	switch ttype.typeId {
 	case TypeI08,
@@ -165,8 +173,11 @@ func CanStore(dst *TTyping, src *TTyping) bool {
 	if IsVoid(dst) && IsVoid(src) {
 		return true
 	}
-	if IsError(dst) && (IsVoid(src) ||
+	if IsError(dst) && (IsPointer(src) ||
 		IsError(src)) {
+		return true
+	}
+	if (IsPointer(dst) && IsPointer(src)) || (IsPointer(dst) && IsVoidPointer(src)) {
 		return true
 	}
 	if IsTheSameInstance(dst, src) {

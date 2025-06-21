@@ -101,10 +101,10 @@ func (analyzer *TAnalyzer) getType(node *TAst) *types.TTyping {
 		return analyzer.state.TStr
 	case AstTypeBool:
 		return analyzer.state.TBit
-	case AstTypeVoid:
-		return analyzer.state.TNil
 	case AstTypeError:
 		return analyzer.state.TErr
+	case AstTypeVoid:
+		return analyzer.state.TVoid
 	case AstTypeTuple:
 		elementTypes := make([]*types.TTyping, 0)
 		for _, elementAst := range node.AstArr0 {
@@ -176,7 +176,7 @@ func (analyzer *TAnalyzer) getType(node *TAst) *types.TTyping {
 				elementAst.Position,
 			)
 		}
-		return types.ToHeapInstance(elementType)
+		return types.ToPointer(elementType)
 	default:
 		RaiseLanguageCompileError(
 			analyzer.file.Path,
@@ -628,7 +628,7 @@ func (analyzer *TAnalyzer) expression(node *TAst) {
 		analyzer.stack.Pop()
 		analyzer.write(")", false)
 		analyzer.stack.Push(CreateValue(
-			types.ToHeapInstance(value.DataType),
+			types.ToPointer(value.DataType),
 			nil,
 		))
 	case AstMul:

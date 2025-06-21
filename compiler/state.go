@@ -16,6 +16,7 @@ type TState struct {
 	TBit       *types.TTyping
 	TNil       *types.TTyping
 	TErr       *types.TTyping
+	TVoid      *types.TTyping
 	ArrayTypes []*types.TTyping // Array of types
 }
 
@@ -29,8 +30,9 @@ func CreateState() *TState {
 	state.TNum = types.TNum()
 	state.TStr = types.TStr()
 	state.TBit = types.TBool()
-	state.TNil = types.TVoid()
+	state.TNil = types.ToPointer(types.TVoid())
 	state.TErr = types.TError()
+	state.TVoid = types.TVoid()
 	state.ArrayTypes = make([]*types.TTyping, 0)
 	return state
 }
