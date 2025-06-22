@@ -323,6 +323,19 @@ func (analyzer *TAnalyzer) expressionAssignLeft(node *TAst) {
 			elementType,
 			nil,
 		))
+	case AstTupleExpression:
+		tupleTypes := make([]*types.TTyping, 0)
+		for index, childNode := range node.AstArr0 {
+			analyzer.expressionAssignLeft(childNode)
+			tupleTypes = append(tupleTypes, analyzer.stack.Pop().DataType)
+			if index < len(node.AstArr0)-1 {
+				analyzer.write(", ", false)
+			}
+		}
+		analyzer.stack.Push(CreateValue(
+			types.TTuple(tupleTypes),
+			nil,
+		))
 	default:
 		RaiseLanguageCompileError(
 			analyzer.file.Path,
@@ -1898,8 +1911,13 @@ func (analyzer *TAnalyzer) statement(node *TAst) {
 		analyzer.visitConst(node)
 	case AstLocal:
 		analyzer.visitLocal(node)
+	case AstFor,
+		AstForIf:
+		analyzer.visitFor(node)
 	case AstIf:
 		analyzer.visitIf(node)
+	case AstCodeBlock:
+		analyzer.visitCodeBlock(node)
 	case AstRunStmnt:
 		analyzer.visitRunStmnt(node)
 	case AstReturnStmnt:
@@ -2843,6 +2861,107 @@ func (analyzer *TAnalyzer) visitLocal(node *TAst) {
 	analyzer.write(")", false)
 }
 
+func (analyzer *TAnalyzer) visitForInit(node *TAst) {
+	switch node.Ttype {
+	case AstAssign,
+		AstBindAssign,
+		AstMulAssign,
+		AstDivAssign,
+		AstModAssign,
+		AstAddAssign,
+		AstSubAssign,
+		AstShlAssign,
+		AstShrAssign,
+		AstAndAssign,
+		AstOrAssign,
+		AstXorAssign:
+		analyzer.expression(node)
+	default:
+		RaiseLanguageCompileError(
+			analyzer.file.Path,
+			analyzer.file.Data,
+			"invalid for statement, for statement must have a mutator or condition",
+			node.Position,
+		)
+	}
+}
+
+func (analyzer *TAnalyzer) visitFor(node *TAst) {
+	isForIf := node.Ttype == AstForIf
+	initNode := node.Ast0
+	conditionNode := node.Ast1
+	muttNode := node.Ast2
+	bodyNode := node.Ast3
+	analyzer.write("for", false)
+	analyzer.srcSp()
+	if !isForIf {
+		if initNode != nil {
+			analyzer.visitForInit(initNode)
+			analyzer.stack.Pop()
+			analyzer.write(";", false)
+		}
+		if conditionNode != nil {
+			analyzer.expression(conditionNode)
+			analyzer.stack.Pop()
+			if muttNode != nil {
+				analyzer.write(";", false)
+			}
+		}
+		if muttNode != nil {
+			analyzer.expression(muttNode)
+			analyzer.stack.Pop()
+		} else if initNode != nil {
+			RaiseLanguageCompileError(
+				analyzer.file.Path,
+				analyzer.file.Data,
+				"invalid for statement, for statement must have a mutator",
+				node.Position,
+			)
+		}
+		if bodyNode.Ttype == AstCodeBlock {
+			analyzer.statement(bodyNode)
+		} else {
+			analyzer.srcSp()
+			analyzer.write("{", true)
+			analyzer.incTb()
+			analyzer.statement(bodyNode)
+			analyzer.srcNl()
+			analyzer.decTb()
+			analyzer.srcTb()
+			analyzer.write("}", false)
+		}
+	} else {
+		if conditionNode == nil {
+			RaiseLanguageCompileError(
+				analyzer.file.Path,
+				analyzer.file.Data,
+				"invalid for statement, for statement must have a condition",
+				node.Position,
+			)
+		}
+		analyzer.write("{", true)
+		analyzer.incTb()
+		analyzer.statement(bodyNode)
+		analyzer.srcNl()
+		analyzer.srcTb()
+		analyzer.write("if", false)
+		analyzer.srcSp()
+		analyzer.expression(conditionNode)
+		analyzer.stack.Pop()
+		analyzer.srcSp()
+		analyzer.write("{", true)
+		analyzer.incTb()
+		analyzer.srcTb()
+		analyzer.write("break", false)
+		analyzer.decTb()
+		analyzer.write("}", false)
+		analyzer.decTb()
+		analyzer.srcNl()
+		analyzer.srcTb()
+		analyzer.write("}", false)
+	}
+}
+
 func (analyzer *TAnalyzer) visitIf(node *TAst) {
 	conditionNode := node.Ast0
 	thenNode := node.Ast1
@@ -2874,6 +2993,22 @@ func (analyzer *TAnalyzer) visitIf(node *TAst) {
 		analyzer.srcTb()
 		analyzer.write("}", false)
 	}
+}
+
+func (analyzer *TAnalyzer) visitCodeBlock(node *TAst) {
+	statements := node.AstArr0
+	analyzer.write("{", true)
+	analyzer.incTb()
+	for index, statement := range statements {
+		analyzer.statement(statement)
+		if index < len(statements)-1 {
+			analyzer.srcNl()
+		}
+	}
+	analyzer.decTb()
+	analyzer.srcNl()
+	analyzer.srcTb()
+	analyzer.write("}", false)
 }
 
 func (analyzer *TAnalyzer) visitRunStmnt(node *TAst) {

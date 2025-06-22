@@ -135,9 +135,22 @@ function main(args [str]) i32 {
 
     Println(Permute(20));
 
-    if (3 >= 3) 
+    if (3 >= 3) {
         Println("Yes");
+    }
+
+    for 
+        arr[0]++;
+    if (arr[0] < 5);
+
+    x1 := 1;
+    y1 := 0;
+    for (x1 = 2;x1 < 20; x1,y1 = x1+1,y1+1) {
+        Println(">>", x1);
+    }
     Println(2 + 2);
+
+    a, b, c = 4, 5, 6;
     return 100;
 }
 

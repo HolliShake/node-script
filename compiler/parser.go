@@ -1317,7 +1317,7 @@ func (parser *TParser) forDecl() *TAst {
 		}
 		cond = parser.expression()
 		parser.acceptV(";")
-		mutt = parser.expression()
+		mutt = parser.postfix()
 		parser.acceptV(")")
 	}
 	body := parser.statement()
@@ -1372,7 +1372,12 @@ func (parser *TParser) forModeDecl() *TAst {
 	if parser.matchV(KeyVar) || parser.matchV(KeyConst) || parser.matchV(KeyLocal) {
 		return parser.statement()
 	} else {
-		return parser.expression()
+		node := parser.postfix()
+		if node == nil {
+			return nil
+		}
+		parser.acceptV(";")
+		return node
 	}
 }
 
