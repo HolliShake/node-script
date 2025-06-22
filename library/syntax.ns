@@ -71,7 +71,10 @@ function main(args [str]) i32 {
     Println(x, y);
     local p Person* = new Person {
         Name: "Philipp Andrew",
-        Age: 2
+        Age: 2,
+        Pet: Dog {
+            Name: "Brownie"
+        }
     };
     println(p);
     local intptr i32* = null;

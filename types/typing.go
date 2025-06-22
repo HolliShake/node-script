@@ -157,6 +157,10 @@ func (t *TTyping) GetMembers() []*TPair {
 	return t.members
 }
 
+func (t *TTyping) AddMember(name string, dataType *TTyping) {
+	t.members = append(t.members, CreatePair(name, dataType))
+}
+
 func (t *TTyping) HasMethod(name string) bool {
 	for _, method := range t.methods {
 		if method.Name == name {

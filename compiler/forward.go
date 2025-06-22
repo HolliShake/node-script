@@ -27,6 +27,13 @@ type TMissingTypeJob struct {
 	TypeAst *TAst
 }
 
+type TMissingAttributeJob struct {
+	file         TFileJob
+	structType   *types.TTyping
+	missingTypes []*TAst
+	missingNames []string
+}
+
 type TDelayedDefine struct {
 	SrcFile TFileJob
 	Node    *TAst
@@ -39,13 +46,14 @@ type TImportLater struct {
 }
 
 type TForward struct {
-	State          *TState
-	Files          []TFileJob
-	Imports        []TFileJob
-	Delayed        []TDelayedImport
-	MissingTypes   []TMissingTypeJob
-	DelayedDefines []TDelayedDefine
-	ImportLater    []TImportLater
+	State             *TState
+	Files             []TFileJob
+	Imports           []TFileJob
+	MissingAttributes []TMissingAttributeJob
+	Delayed           []TDelayedImport
+	MissingTypes      []TMissingTypeJob
+	DelayedDefines    []TDelayedDefine
+	ImportLater       []TImportLater
 }
 
 // FILE
@@ -121,6 +129,25 @@ func (f *TForward) popImport() TFileJob {
 
 func (f *TForward) pushImport(file TFileJob) {
 	f.Imports = append(f.Imports, file)
+}
+
+// MISSING ATTRIBUTES
+
+func (f *TForward) hasMissingAttributes() bool {
+	return len(f.MissingAttributes) > 0
+}
+
+func (f *TForward) popMissingAttributes() TMissingAttributeJob {
+	if !f.hasMissingAttributes() {
+		RaiseSystemError("no missing attribute to pop")
+	}
+	missingAttribute := f.MissingAttributes[len(f.MissingAttributes)-1]
+	f.MissingAttributes = f.MissingAttributes[:len(f.MissingAttributes)-1]
+	return missingAttribute
+}
+
+func (f *TForward) pushMissingAttributes(missingAttribute TMissingAttributeJob) {
+	f.MissingAttributes = append(f.MissingAttributes, missingAttribute)
 }
 
 // DELAYED
@@ -342,6 +369,10 @@ func (f *TForward) forwardStruct(fileJob TFileJob, node *TAst) {
 			node.Position,
 		)
 	}
+
+	missingNames := make([]string, 0)
+	missingTypes := make([]*TAst, 0)
+
 	attributes := make([]*types.TPair, 0)
 	for i := range namesNode {
 		attrN := namesNode[i]
@@ -361,6 +392,8 @@ func (f *TForward) forwardStruct(fileJob TFileJob, node *TAst) {
 				NameAst: attrN,
 				TypeAst: typeN,
 			})
+			missingTypes = append(missingTypes, typeN)
+			missingNames = append(missingNames, attrN.Str0)
 			continue
 		}
 		if newEnv.HasLocalSymbol(attrN.Str0) {
@@ -391,11 +424,20 @@ func (f *TForward) forwardStruct(fileJob TFileJob, node *TAst) {
 			nameNode.Position,
 		)
 	}
+	dataType := types.TStruct(JoinVariableName(GetFileNameWithoutExtension(fileJob.Path), nameNode.Str0), attributes)
+	if len(missingTypes) > 0 {
+		f.pushMissingAttributes(TMissingAttributeJob{
+			file:         fileJob,
+			structType:   dataType,
+			missingTypes: missingTypes,
+			missingNames: missingNames,
+		})
+	}
 	fileJob.Env.AddSymbol(TSymbol{
 		Name:         nameNode.Str0,
 		NameSpace:    JoinVariableName(GetFileNameWithoutExtension(fileJob.Path), nameNode.Str0),
 		Module:       GetFileNameWithoutExtension(fileJob.Path),
-		DataType:     types.TStruct(JoinVariableName(GetFileNameWithoutExtension(fileJob.Path), nameNode.Str0), attributes),
+		DataType:     dataType,
 		Position:     node.Position,
 		IsGlobal:     true,
 		IsConst:      true,
@@ -818,6 +860,25 @@ func (f *TForward) build() {
 				INVALID_TYPE_OR_MISSING,
 				missingType.TypeAst.Position,
 			)
+		}
+	}
+
+	// Missing attributes resolution
+	for f.hasMissingAttributes() {
+		missingAttribute := f.popMissingAttributes()
+		for index, missingType := range missingAttribute.missingTypes {
+			missingName := missingAttribute.missingNames[index]
+			attrType := f.getType(missingAttribute.file, missingType)
+			fmt.Println("T>>", missingType.Str0)
+			if attrType == nil {
+				RaiseLanguageCompileError(
+					missingAttribute.file.Path,
+					missingAttribute.file.Data,
+					INVALID_TYPE_OR_MISSING,
+					missingType.Position,
+				)
+			}
+			missingAttribute.structType.AddMember(missingName, attrType)
 		}
 	}
 
