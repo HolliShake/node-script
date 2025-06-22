@@ -121,5 +121,15 @@ function main(args [str]) i32 {
     Println(mp);
     mp.Delete("Three");
     Println(mp);
+   
+    arr.Each(function(index i64, value i32) void {
+        Println(index, value);
+    });
+
     return 100;
+}
+
+
+function iter(a i32, value i32) void {
+    Println(value);
 }

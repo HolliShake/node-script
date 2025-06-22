@@ -271,6 +271,14 @@ func TArray(element *TTyping) *TTyping {
 	set_method := CreatePairWithNamespace("Set", "Set", TFunc(false, []*TPair{CreatePair("index", TInt64()), CreatePair("value", element)}, TVoid(), false))
 	typing.methods = append(typing.methods, set_method)
 
+	// Each method
+	each_method := CreatePairWithNamespace("Each", "Each", TFunc(false, []*TPair{CreatePair("callback", TFunc(false, []*TPair{CreatePair("index", TInt64()), CreatePair("value", element)}, TVoid(), false))}, TVoid(), false))
+	typing.methods = append(typing.methods, each_method)
+
+	// Some method
+	some_method := CreatePairWithNamespace("Some", "Some", TFunc(false, []*TPair{CreatePair("callback", TFunc(false, []*TPair{CreatePair("index", TInt64()), CreatePair("value", element)}, TBool(), false))}, TBool(), false))
+	typing.methods = append(typing.methods, some_method)
+
 	return typing
 }
 

@@ -108,17 +108,50 @@ func (parser *TParser) terminal() *TAst {
 }
 
 func (parser *TParser) group() *TAst {
-	if parser.matchV("{") {
-		return parser.hashmap()
-	} else if parser.matchV("[") {
+	if parser.matchV("[") {
 		return parser.array()
+	} else if parser.matchV("{") {
+		return parser.hashmap()
 	} else if parser.matchV("(") {
 		parser.acceptV("(")
 		node := parser.mandatoryExpression()
 		parser.acceptV(")")
 		return node
+	} else if parser.matchV(KeyFunction) {
+		return parser.functionExpression()
 	}
 	return parser.terminal()
+}
+
+func (parser *TParser) array() *TAst {
+	start := parser.look.Position
+	ended := start
+	parser.acceptV("[")
+	elements := make([]*TAst, 0)
+	elementN := parser.expression()
+	if elementN != nil {
+		elements = append(elements, elementN)
+		for parser.matchV(",") {
+			parser.acceptV(",")
+			elementN = parser.expression()
+			if elementN == nil {
+				RaiseLanguageCompileError(
+					parser.Tokenizer.File,
+					parser.Tokenizer.Data,
+					"missing expression after comma",
+					parser.look.Position,
+				)
+			}
+			elements = append(elements, elementN)
+		}
+	}
+	ended = parser.look.Position
+	parser.acceptV("]")
+	return AstSingleArray(
+		AstArray,
+		start.Merge(ended),
+		elements,
+	)
 }
 
 func (parser *TParser) hashmap() *TAst {
@@ -162,34 +195,59 @@ func (parser *TParser) hashmap() *TAst {
 	)
 }
 
-func (parser *TParser) array() *TAst {
+func (parser *TParser) functionExpression() *TAst {
 	start := parser.look.Position
 	ended := start
-	parser.acceptV("[")
-	elements := make([]*TAst, 0)
-	elementN := parser.expression()
-	if elementN != nil {
-		elements = append(elements, elementN)
+	parser.acceptV(KeyFunction)
+	parser.acceptV("(")
+	names := make([]*TAst, 0)
+	types := make([]*TAst, 0)
+	var nameN *TAst = parser.terminal()
+	var typeN *TAst
+	if nameN != nil {
+		typeN = parser.typing()
+		names = append(names, nameN)
+		types = append(types, typeN)
 		for parser.matchV(",") {
 			parser.acceptV(",")
-			elementN = parser.expression()
-			if elementN == nil {
+			nameN := parser.terminal()
+			if nameN == nil {
 				RaiseLanguageCompileError(
 					parser.Tokenizer.File,
 					parser.Tokenizer.Data,
-					"missing expression after comma",
+					"missing field name",
 					parser.look.Position,
 				)
 			}
-			elements = append(elements, elementN)
+			typeN := parser.typing()
+			names = append(names, nameN)
+			types = append(types, typeN)
 		}
 	}
+	parser.acceptV(")")
+	returnTypeAst := parser.typing()
+	panics := parser.matchV(KeyPanics)
+	if panics {
+		parser.acceptV(KeyPanics)
+	}
+	parser.acceptV("{")
+	children := make([]*TAst, 0)
+	childN := parser.statement()
+	for childN != nil {
+		children = append(children, childN)
+		childN = parser.statement()
+	}
 	ended = parser.look.Position
-	parser.acceptV("]")
-	return AstSingleArray(
-		AstArray,
+	parser.acceptV("}")
+	return AstFunctionDec(
+		AstFunction,
 		start.Merge(ended),
-		elements,
+		nil,
+		returnTypeAst,
+		names,
+		types,
+		children,
+		panics,
 	)
 }
 

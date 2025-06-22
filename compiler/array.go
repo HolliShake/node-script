@@ -44,6 +44,19 @@ func (arr *Array{{TypeName}}) Pop() {{TypeName}} {
 	arr.length--
 	return last
 }
+func (arr *Array{{TypeName}}) Each(callback func(index int, value {{TypeName}})) {
+	for i := 0; i < len(arr.elements); i++ {
+		callback(i, arr.elements[i])
+	}
+}
+func (arr *Array{{TypeName}}) Some(callback func(index int, value {{TypeName}}) bool) bool {
+	for i := 0; i < len(arr.elements); i++ {
+		if callback(i, arr.elements[i]) {
+			return true
+		}
+	}
+	return false
+}
 func (arr *Array{{TypeName}}) String() string {
 	if arr.length == 0 {
 		return "[]"

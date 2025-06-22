@@ -431,6 +431,20 @@ func (analyzer *TAnalyzer) expression(node *TAst) {
 			analyzer.state.TNil,
 			nil,
 		))
+	case AstTupleExpression:
+		tupleTypes := make([]*types.TTyping, 0)
+		for index, childNode := range node.AstArr0 {
+			analyzer.expression(childNode)
+			dataType := analyzer.stack.Pop().DataType
+			tupleTypes = append(tupleTypes, dataType)
+			if index < len(node.AstArr0)-1 {
+				analyzer.write(", ", false)
+			}
+		}
+		analyzer.stack.Push(CreateValue(
+			types.TTuple(tupleTypes),
+			nil,
+		))
 	case AstArray:
 		saveSrc := analyzer.src
 		saveStack := analyzer.stack
@@ -579,6 +593,124 @@ func (analyzer *TAnalyzer) expression(node *TAst) {
 			types.THashMap(keyType, valueType),
 			nil,
 		))
+	case AstFunction:
+		functionScope := CreateFunctionScope(analyzer.scope, node.Flg0)
+		localScope := CreateScope(functionScope, ScopeLocal)
+		analyzer.scope = functionScope
+		analyzer.scope = localScope
+		panics := node.Flg0
+		returnTypeNode := node.Ast1
+		paramNamesNode := node.AstArr0
+		paramTypesNode := node.AstArr1
+		childrenNode := node.AstArr2
+		analyzer.write("func", false)
+		analyzer.srcSp()
+		analyzer.write("(", false)
+		parametersTypesPair := make([]*types.TPair, 0, len(paramNamesNode))
+		for index, paramNameNode := range paramNamesNode {
+			paramTypeNode := paramTypesNode[index]
+			if paramNameNode.Ttype != AstIDN {
+				RaiseLanguageCompileError(
+					analyzer.file.Path,
+					analyzer.file.Data,
+					INVALID_FUNCTION_PARAM_NAME,
+					paramNameNode.Position,
+				)
+			}
+			// Parameter name must use camel case
+			if !IsCamelCase(paramNameNode.Str0) {
+				RaiseLanguageCompileError(
+					analyzer.file.Path,
+					analyzer.file.Data,
+					"invalid parameter name, parameter name must be in a form of camel case",
+					paramNameNode.Position,
+				)
+			}
+			parameterType := analyzer.getType(paramTypeNode)
+			parametersTypesPair = append(parametersTypesPair, types.CreatePair(paramNameNode.Str0, parameterType))
+			analyzer.write(fmt.Sprintf("%s %s", paramNameNode.Str0, parameterType.ToGoType()), false)
+			if index < len(paramNamesNode)-1 {
+				analyzer.write(", ", false)
+			}
+			if analyzer.scope.Env.HasLocalSymbol(paramNameNode.Str0) {
+				RaiseLanguageCompileError(
+					analyzer.file.Path,
+					analyzer.file.Data,
+					INVALID_FUNCTION_PARAM_NAME_DUPLICATE,
+					paramNameNode.Position,
+				)
+			}
+			analyzer.scope.Env.AddSymbol(TSymbol{
+				Name:         paramNameNode.Str0,
+				NameSpace:    paramNameNode.Str0,
+				Module:       "",
+				DataType:     analyzer.getType(paramTypeNode),
+				Position:     paramNameNode.Position,
+				IsGlobal:     analyzer.scope.InGlobal(),
+				IsConst:      false,
+				IsUsed:       true,
+				IsInitialize: true, // For parameters, we always initialize them.
+			})
+		}
+		analyzer.write(")", false)
+		returnType := analyzer.getType(returnTypeNode)
+		analyzer.srcSp()
+		analyzer.write(returnType.ToGoType(), false)
+		analyzer.srcSp()
+		analyzer.write("{", false)
+		analyzer.incTb()
+		for index, childNode := range childrenNode {
+			analyzer.statement(childNode)
+			if index < len(childrenNode)-1 {
+				analyzer.srcNl()
+			}
+		}
+		if functionScope.Return == nil {
+			if len(childrenNode) > 0 {
+				analyzer.srcNl()
+			}
+			analyzer.srcTb()
+			analyzer.write("return", false)
+			analyzer.srcSp()
+			analyzer.write(returnType.DefaultValue(), false)
+		} else if !types.CanStore(returnType, functionScope.Return) {
+			RaiseLanguageCompileError(
+				analyzer.file.Path,
+				analyzer.file.Data,
+				fmt.Sprintf("cannot return %s, return type must be %s", functionScope.Return.ToString(), returnType.ToString()),
+				node.Position,
+			)
+		}
+		if functionScope.Panics && !functionScope.HasPanic {
+			RaiseLanguageCompileError(
+				analyzer.file.Path,
+				analyzer.file.Data,
+				"function declared to panic, but it does not actually panic",
+				node.Position,
+			)
+		}
+		analyzer.decTb()
+		analyzer.srcNl()
+		analyzer.write("}", false)
+		analyzer.scope = analyzer.scope.Parent
+		analyzer.scope = analyzer.scope.Parent
+		// Check if there are any unused variables.
+		env := localScope.Env
+		for _, symbol := range env.Symbols {
+			if !symbol.IsUsed {
+				RaiseLanguageCompileError(
+					analyzer.file.Path,
+					analyzer.file.Data,
+					fmt.Sprintf("unused variable: %s", symbol.Name),
+					symbol.Position,
+				)
+			}
+		}
+		dataType := types.TFunc(false, parametersTypesPair, returnType, panics)
+		analyzer.stack.Push(CreateValue(
+			dataType,
+			nil,
+		))
 	case AstPlus2:
 		analyzer.expressionAssignLeft(node.Ast0)
 		leftType := analyzer.stack.Pop().DataType
@@ -609,20 +741,6 @@ func (analyzer *TAnalyzer) expression(node *TAst) {
 		}
 		analyzer.stack.Push(CreateValue(
 			nil,
-			nil,
-		))
-	case AstTupleExpression:
-		tupleTypes := make([]*types.TTyping, 0)
-		for index, childNode := range node.AstArr0 {
-			analyzer.expression(childNode)
-			dataType := analyzer.stack.Pop().DataType
-			tupleTypes = append(tupleTypes, dataType)
-			if index < len(node.AstArr0)-1 {
-				analyzer.write(", ", false)
-			}
-		}
-		analyzer.stack.Push(CreateValue(
-			types.TTuple(tupleTypes),
 			nil,
 		))
 	case AstMember:
