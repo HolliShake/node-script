@@ -2087,7 +2087,7 @@ func (analyzer *TAnalyzer) visitStruct(node *TAst) {
 	analyzer.srcTb()
 	analyzer.write("return newInstance", true)
 	analyzer.decTb()
-	analyzer.write("}", false)
+	analyzer.write("}", true)
 
 	// Create a String method for the struct
 	analyzer.srcNl()
@@ -2115,7 +2115,7 @@ func (analyzer *TAnalyzer) visitStruct(node *TAst) {
 	analyzer.srcTb()
 	analyzer.write("return str", true)
 	analyzer.decTb()
-	analyzer.write("}", false)
+	analyzer.write("}", true)
 }
 
 func (analyzer *TAnalyzer) visitFunction(node *TAst) {
