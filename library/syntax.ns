@@ -137,12 +137,9 @@ function main(args [str]) i32 {
 
     if (3 >= 3) 
         Println("Yes");
-    else
-        Println("No");
-
+    Println(2 + 2);
     return 100;
 }
-
 
 function iter(a i32, value i32) void {
     Println(value);

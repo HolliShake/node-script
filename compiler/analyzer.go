@@ -657,7 +657,7 @@ func (analyzer *TAnalyzer) expression(node *TAst) {
 		analyzer.srcSp()
 		analyzer.write(returnType.ToGoType(), false)
 		analyzer.srcSp()
-		analyzer.write("{", false)
+		analyzer.write("{", true)
 		analyzer.incTb()
 		for index, childNode := range childrenNode {
 			analyzer.statement(childNode)
