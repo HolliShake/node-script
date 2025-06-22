@@ -175,6 +175,12 @@ function main(args [str]) i32 {
         Println("Nah!!");
     }
 
+    t := Time {
+
+    };
+    
+    Println(t);
+
     a, b, c = 4, 5, 6;
     Println(factorial(5));
 

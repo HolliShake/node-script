@@ -339,30 +339,6 @@ func TFunc(variadic bool, attributes []*TPair, returnType *TTyping, panics bool)
 	return typing
 }
 
-func TFromGoStruct(namespace string, goType types.Type) *TTyping {
-	typing := CreateTyping(namespace, TypeStruct)
-	typing.hasConstructor = false // Struct has no constructor, if it was not defined by user
-	typing.compat = goType
-
-	// Members (from Struct)
-	if structType, ok := goType.Underlying().(*types.Struct); ok {
-		for i := 0; i < structType.NumFields(); i++ {
-			field := structType.Field(i)
-			typing.members = append(typing.members, CreatePair(field.Name(), TFromGoTypes(field.Type())))
-		}
-	}
-
-	// Methods (from Named)
-	if namedType, ok := goType.(*types.Named); ok {
-		for i := 0; i < namedType.NumMethods(); i++ {
-			method := namedType.Method(i)
-			typing.methods = append(typing.methods, CreatePair(method.Name(), TFromGoTypes(method.Type())))
-		}
-	}
-
-	return typing
-}
-
 func SetCompat(typing *TTyping, compat types.Type) *TTyping {
 	typing.compat = compat
 	return typing

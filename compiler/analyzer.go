@@ -2370,14 +2370,8 @@ func (analyzer *TAnalyzer) visitImport(node *TAst) {
 		// Make sure this was handled by Forwarder
 		pkg := pathNode.Str0[3:]
 		analyzer.addModule(fmt.Sprintf("\"%s\"", pkg))
-		asTypes := make([]struct {
-			dataType *types.TTyping
-			name     string
-		}, 0)
-		asVars := make([]struct {
-			dataType *types.TTyping
-			name     string
-		}, 0)
+		asTypes := make([]*types.TPair, 0)
+		asVars := make([]*types.TPair, 0)
 
 		for _, nameNode := range namesNode {
 			if nameNode.Ttype != AstIDN {
@@ -2398,32 +2392,20 @@ func (analyzer *TAnalyzer) visitImport(node *TAst) {
 			}
 			symbol := analyzer.scope.Env.GetSymbol(nameNode.Str0)
 			if types.IsStruct(symbol.DataType) {
-				asTypes = append(asTypes, struct {
-					dataType *types.TTyping
-					name     string
-				}{
-					dataType: symbol.DataType,
-					name:     nameNode.Str0,
-				})
+				asTypes = append(asTypes, types.CreatePair(nameNode.Str0, symbol.DataType))
 			} else {
-				asVars = append(asVars, struct {
-					dataType *types.TTyping
-					name     string
-				}{
-					dataType: symbol.DataType,
-					name:     nameNode.Str0,
-				})
+				asVars = append(asVars, types.CreatePair(nameNode.Str0, symbol.DataType))
 			}
 		}
 
 		if len(asTypes) > 0 {
 			for _, asType := range asTypes {
-				info := analyzer.scope.Env.GetSymbol(asType.name)
+				info := analyzer.scope.Env.GetSymbol(asType.Name)
 				analyzer.write("type", false)
 				analyzer.srcSp()
 				analyzer.write(info.NameSpace, false)
 				analyzer.srcSp()
-				analyzer.write(fmt.Sprintf("%s.%s", pkg, asType.name), true)
+				analyzer.write(fmt.Sprintf("%s.%s", pkg, asType.Name), true)
 			}
 		}
 
@@ -2432,16 +2414,16 @@ func (analyzer *TAnalyzer) visitImport(node *TAst) {
 			analyzer.write("(", true)
 			analyzer.incTb()
 			for _, asVar := range asVars {
-				info := analyzer.scope.Env.GetSymbol(asVar.name)
+				info := analyzer.scope.Env.GetSymbol(asVar.Name)
 				analyzer.srcTb()
 				if types.IsArray(info.DataType) {
-					elementType := asVar.dataType.GetInternal0()
+					elementType := asVar.DataType.GetInternal0()
 					analyzer.write(fmt.Sprintf(
 						"%s %s = %s(%s.%s)",
 						info.NameSpace,
-						asVar.dataType.ToGoType(),
+						asVar.DataType.ToGoType(),
 						GetArrayConstructor(elementType),
-						pkg, asVar.name,
+						pkg, asVar.Name,
 					), true)
 				} else if types.IsMap(info.DataType) {
 					keyType := info.DataType.GetInternal0()
@@ -2449,18 +2431,18 @@ func (analyzer *TAnalyzer) visitImport(node *TAst) {
 					analyzer.write(fmt.Sprintf(
 						"%s %s = %s(%s.%s)",
 						info.NameSpace,
-						asVar.dataType.ToGoType(),
+						asVar.DataType.ToGoType(),
 						GetMapConstructor(keyType, valueType),
 						pkg,
-						asVar.name,
+						asVar.Name,
 					), true)
 				} else {
 					analyzer.write(fmt.Sprintf(
 						"%s %s = %s.%s",
 						info.NameSpace,
-						asVar.dataType.ToGoType(),
+						asVar.DataType.ToGoType(),
 						pkg,
-						asVar.name,
+						asVar.Name,
 					), true)
 				}
 			}
