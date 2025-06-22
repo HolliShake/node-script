@@ -107,6 +107,6 @@ function main(args [str]) i32 {
     };
     Println(mp, arr);
     mp["One"] += 2;
-    Println(mp["One"]);
+    Println(mp["One"], arr.Get(0), mp.Get("One"));
     return 100;
 }
