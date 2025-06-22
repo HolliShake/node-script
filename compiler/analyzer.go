@@ -736,7 +736,7 @@ func (analyzer *TAnalyzer) expression(node *TAst) {
 			)
 		}
 		analyzer.stack.Push(CreateValue(
-			nil,
+			leftType,
 			nil,
 		))
 	case AstMinus2:
@@ -752,7 +752,7 @@ func (analyzer *TAnalyzer) expression(node *TAst) {
 			)
 		}
 		analyzer.stack.Push(CreateValue(
-			nil,
+			leftType,
 			nil,
 		))
 	case AstMember:
@@ -1566,7 +1566,7 @@ func (analyzer *TAnalyzer) expression(node *TAst) {
 			)
 		}
 		analyzer.stack.Push(CreateValue(
-			nil,
+			leftType,
 			nil,
 		))
 	case AstMulAssign:
@@ -1584,7 +1584,7 @@ func (analyzer *TAnalyzer) expression(node *TAst) {
 			)
 		}
 		analyzer.stack.Push(CreateValue(
-			nil,
+			leftType,
 			nil,
 		))
 	case AstDivAssign:
@@ -1602,7 +1602,7 @@ func (analyzer *TAnalyzer) expression(node *TAst) {
 			)
 		}
 		analyzer.stack.Push(CreateValue(
-			nil,
+			leftType,
 			nil,
 		))
 	case AstModAssign:
@@ -1620,7 +1620,7 @@ func (analyzer *TAnalyzer) expression(node *TAst) {
 			)
 		}
 		analyzer.stack.Push(CreateValue(
-			nil,
+			leftType,
 			nil,
 		))
 	case AstAddAssign:
@@ -1638,7 +1638,7 @@ func (analyzer *TAnalyzer) expression(node *TAst) {
 			)
 		}
 		analyzer.stack.Push(CreateValue(
-			nil,
+			leftType,
 			nil,
 		))
 	case AstSubAssign:
@@ -1656,7 +1656,7 @@ func (analyzer *TAnalyzer) expression(node *TAst) {
 			)
 		}
 		analyzer.stack.Push(CreateValue(
-			nil,
+			leftType,
 			nil,
 		))
 	case AstShlAssign:
@@ -1674,7 +1674,7 @@ func (analyzer *TAnalyzer) expression(node *TAst) {
 			)
 		}
 		analyzer.stack.Push(CreateValue(
-			nil,
+			leftType,
 			nil,
 		))
 	case AstShrAssign:
@@ -1692,7 +1692,7 @@ func (analyzer *TAnalyzer) expression(node *TAst) {
 			)
 		}
 		analyzer.stack.Push(CreateValue(
-			nil,
+			leftType,
 			nil,
 		))
 	case AstAndAssign:
@@ -1710,7 +1710,7 @@ func (analyzer *TAnalyzer) expression(node *TAst) {
 			)
 		}
 		analyzer.stack.Push(CreateValue(
-			nil,
+			leftType,
 			nil,
 		))
 	case AstOrAssign:
@@ -1728,7 +1728,7 @@ func (analyzer *TAnalyzer) expression(node *TAst) {
 			)
 		}
 		analyzer.stack.Push(CreateValue(
-			nil,
+			leftType,
 			nil,
 		))
 	case AstXorAssign:
@@ -1746,7 +1746,7 @@ func (analyzer *TAnalyzer) expression(node *TAst) {
 			)
 		}
 		analyzer.stack.Push(CreateValue(
-			nil,
+			leftType,
 			nil,
 		))
 	case AstBindAssign:
