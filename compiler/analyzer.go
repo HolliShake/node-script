@@ -559,7 +559,7 @@ func (analyzer *TAnalyzer) expression(node *TAst) {
 			)
 		}
 		analyzer.write(objectInfo.NameSpace, false)
-		analyzer.write(" ", false)
+		analyzer.srcSp()
 		analyzer.write("{", false)
 		for index, childNode := range namesNode {
 			if childNode.Ttype != AstIDN {
@@ -579,7 +579,8 @@ func (analyzer *TAnalyzer) expression(node *TAst) {
 				)
 			}
 			analyzer.write(childNode.Str0, false)
-			analyzer.write(": ", false)
+			analyzer.write(":", false)
+			analyzer.srcSp()
 			memberType := objDataType.GetMember(childNode.Str0).DataType
 			analyzer.expression(valuesNode[index])
 			actualType := analyzer.stack.Pop().DataType
@@ -598,6 +599,66 @@ func (analyzer *TAnalyzer) expression(node *TAst) {
 		analyzer.write("}", false)
 		analyzer.stack.Push(CreateValue(
 			types.ToInstance(objDataType),
+			nil,
+		))
+	case AstIf:
+		conditionNode := node.Ast0
+		bodyNode := node.Ast1
+		elseBodyNode := node.Ast2
+		// Save src
+		saveSrc := analyzer.src
+		analyzer.src = ""
+		analyzer.expression(bodyNode)
+		expectedType := analyzer.stack.Pop().DataType
+		// Restore
+		analyzer.src = saveSrc
+		analyzer.write("(", false)
+		analyzer.write("func()", false)
+		analyzer.srcSp()
+		analyzer.write(expectedType.ToGoType(), false)
+		analyzer.srcSp()
+		analyzer.write("{", true)
+		analyzer.incTb()
+		analyzer.write("if", false)
+		analyzer.srcSp()
+		analyzer.expression(conditionNode)
+		analyzer.stack.Pop()
+		analyzer.srcSp()
+		analyzer.write("{", true)
+		analyzer.incTb()
+		analyzer.srcTb()
+		analyzer.write("return", false)
+		analyzer.srcSp()
+		analyzer.expression(bodyNode)
+		analyzer.stack.Pop()
+		analyzer.srcNl()
+		analyzer.decTb()
+		analyzer.write("}", false)
+		analyzer.write("else", false)
+		analyzer.srcSp()
+		analyzer.write("{", true)
+		analyzer.incTb()
+		analyzer.srcTb()
+		analyzer.write("return", false)
+		analyzer.srcSp()
+		analyzer.expression(elseBodyNode)
+		elseType := analyzer.stack.Pop().DataType
+		analyzer.srcNl()
+		analyzer.decTb()
+		analyzer.write("}", false)
+		analyzer.write("}", false)
+		analyzer.write(")", false)
+		analyzer.write("()", false)
+		if !types.CanStore(expectedType, elseType) {
+			RaiseLanguageCompileError(
+				analyzer.file.Path,
+				analyzer.file.Data,
+				fmt.Sprintf("else branch must return %s, got %s", expectedType.ToString(), elseType.ToString()),
+				node.Position,
+			)
+		}
+		analyzer.stack.Push(CreateValue(
+			expectedType,
 			nil,
 		))
 	case AstPlus:
@@ -1539,7 +1600,7 @@ func (analyzer *TAnalyzer) visitFunction(node *TAst) {
 		}
 		analyzer.srcTb()
 		analyzer.write("return", false)
-		analyzer.write(" ", false)
+		analyzer.srcSp()
 		analyzer.write(returnType.DefaultValue(), false)
 	} else if !types.CanStore(returnType, functionScope.Return) {
 		RaiseLanguageCompileError(
@@ -1694,9 +1755,9 @@ func (analyzer *TAnalyzer) visitImport(node *TAst) {
 			for _, asType := range asTypes {
 				info := analyzer.scope.Env.GetSymbol(asType.name)
 				analyzer.write("type", false)
-				analyzer.write(" ", false)
+				analyzer.srcSp()
 				analyzer.write(info.NameSpace, false)
-				analyzer.write(" ", false)
+				analyzer.srcSp()
 				analyzer.write(fmt.Sprintf("%s.%s", pkg, asType.name), true)
 			}
 		}

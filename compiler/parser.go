@@ -356,11 +356,12 @@ func (parser *TParser) ifExpression() *TAst {
 			)
 		}
 		ended = elseBody.Position
-		return AstDouble(
+		return AstTriple(
 			AstIf,
 			start.Merge(ended),
 			condition,
 			body,
+			elseBody,
 		)
 	}
 	return parser.structExpression()

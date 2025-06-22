@@ -9,6 +9,7 @@ struct Person {
     Name str;
     Age  i32;
     Pet  Dog;
+    IsGay bool;
 }
 
 function (p Person) GetName() str {
@@ -71,12 +72,14 @@ function main(args [str]) i32 {
     Println(x, y);
     local p Person* = new Person {
         Name: "Philipp Andrew",
-        Age: 2,
+        Age: 24,
         Pet: Dog {
             Name: "Brownie",
             Age: 20
-        }
+        },
+        IsGay: if (v > 10) true else false
     };
+    println(if (3 < 2) "Hello" else "22");
     println(p);
     local intptr i32* = null;
     println(intptr);
@@ -85,5 +88,11 @@ function main(args [str]) i32 {
     Println(-200);
     Println(~200);
     Println(!false);
+    local label str = 
+        if (!p.IsGay) 
+            "true" 
+        else 
+            "false";
+    println(label);
     return 100;
 }
