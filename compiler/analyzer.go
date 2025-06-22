@@ -452,6 +452,38 @@ func (analyzer *TAnalyzer) expression(node *TAst) {
 			types.TArray(elementType),
 			nil,
 		))
+	case AstPlus2:
+		analyzer.expressionAssignLeft(node.Ast0)
+		leftType := analyzer.stack.Pop().DataType
+		analyzer.write("++", false)
+		if !types.IsAnyNumber(leftType) {
+			RaiseLanguageCompileError(
+				analyzer.file.Path,
+				analyzer.file.Data,
+				fmt.Sprintf("cannot increment %s", leftType.ToString()),
+				node.Position,
+			)
+		}
+		analyzer.stack.Push(CreateValue(
+			nil,
+			nil,
+		))
+	case AstMinus2:
+		analyzer.expressionAssignLeft(node.Ast0)
+		leftType := analyzer.stack.Pop().DataType
+		analyzer.write("--", false)
+		if !types.IsAnyNumber(leftType) {
+			RaiseLanguageCompileError(
+				analyzer.file.Path,
+				analyzer.file.Data,
+				fmt.Sprintf("cannot decrement %s", leftType.ToString()),
+				node.Position,
+			)
+		}
+		analyzer.stack.Push(CreateValue(
+			nil,
+			nil,
+		))
 	case AstTupleExpression:
 		tupleTypes := make([]*types.TTyping, 0)
 		for index, childNode := range node.AstArr0 {

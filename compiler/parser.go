@@ -1452,24 +1452,6 @@ func (parser *TParser) blockStmnt() *TAst {
 	)
 }
 
-func (parser *TParser) postfix() *TAst {
-	node := parser.logical()
-	if node == nil {
-		return nil
-	}
-	for parser.matchV("++") || parser.matchV("--") {
-		opt := parser.look.Value
-		parser.acceptT(TokenSYM)
-		node = AstUnary(
-			GetAstTypeByPostfixOp(opt),
-			node.Position,
-			node,
-			opt,
-		)
-	}
-	return node
-}
-
 func (parser *TParser) tupleOrExpression() *TAst {
 	start := parser.look.Position
 	ended := start
@@ -1485,7 +1467,7 @@ func (parser *TParser) tupleOrExpression() *TAst {
 	for parser.matchV(",") {
 		parser.acceptV(",")
 		ended = parser.look.Position
-		rhs := parser.postfix()
+		rhs := parser.logical()
 		if rhs == nil {
 			RaiseLanguageCompileError(
 				parser.Tokenizer.File,
@@ -1643,10 +1625,28 @@ func (parser *TParser) bitAssign() *TAst {
 	return lhs
 }
 
+func (parser *TParser) postfix() *TAst {
+	node := parser.bitAssign()
+	if node == nil {
+		return nil
+	}
+	for parser.matchV("++") || parser.matchV("--") {
+		opt := parser.look.Value
+		parser.acceptT(TokenSYM)
+		node = AstUnary(
+			GetAstTypeByPostfixOp(opt),
+			node.Position,
+			node,
+			opt,
+		)
+	}
+	return node
+}
+
 func (parser *TParser) expressionStatment() *TAst {
 	start := parser.look.Position
 	ended := start
-	expr := parser.bitAssign()
+	expr := parser.postfix()
 	if expr == nil {
 		if !parser.matchV(";") {
 			return nil
