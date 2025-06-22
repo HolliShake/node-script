@@ -123,7 +123,7 @@ function main(args [str]) i32 {
     Println(mp);
    
     arr.Each(function(index i64, value i32) void {
-        Println(index, value);
+        Println(index, value * index);
     });
 
     return 100;

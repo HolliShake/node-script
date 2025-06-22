@@ -2422,6 +2422,17 @@ func (analyzer *TAnalyzer) visitImport(node *TAst) {
 						GetArrayConstructor(elementType),
 						pkg, asVar.name,
 					), true)
+				} else if types.IsMap(info.DataType) {
+					keyType := info.DataType.GetInternal0()
+					valueType := info.DataType.GetInternal1()
+					analyzer.write(fmt.Sprintf(
+						"%s %s = %s(%s.%s)",
+						info.NameSpace,
+						asVar.dataType.ToGoType(),
+						GetMapConstructor(keyType, valueType),
+						pkg,
+						asVar.name,
+					), true)
 				} else {
 					analyzer.write(fmt.Sprintf(
 						"%s %s = %s.%s",
