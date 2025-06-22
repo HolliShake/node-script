@@ -73,7 +73,8 @@ function main(args [str]) i32 {
         Name: "Philipp Andrew",
         Age: 2,
         Pet: Dog {
-            Name: "Brownie"
+            Name: "Brownie",
+            Age: 20
         }
     };
     println(p);

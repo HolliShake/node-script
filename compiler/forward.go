@@ -869,7 +869,6 @@ func (f *TForward) build() {
 		for index, missingType := range missingAttribute.missingTypes {
 			missingName := missingAttribute.missingNames[index]
 			attrType := f.getType(missingAttribute.file, missingType)
-			fmt.Println("T>>", missingType.Str0)
 			if attrType == nil {
 				RaiseLanguageCompileError(
 					missingAttribute.file.Path,
