@@ -12,3 +12,11 @@ Parrot Script is a programming language frontend for golang/go. It runs on top o
 ## Getting Started
 
 To install Parrot Script:
+
+## TODOS
+- [ ] Add Switch expression
+- [ ] Add Switch statement
+- [ ] Add While loop
+- [ ] Add Do/While loop
+- [ ] Very Go package path
+- [ ] Add wrapper if the foreign function returns array or map
