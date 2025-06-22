@@ -1919,6 +1919,8 @@ func (analyzer *TAnalyzer) statement(node *TAst) {
 		analyzer.visitCodeBlock(node)
 	case AstRunStmnt:
 		analyzer.visitRunStmnt(node)
+	case AstBreakStmnt:
+		analyzer.visitBreak(node)
 	case AstReturnStmnt:
 		analyzer.visitReturn(node)
 	case AstEmptyStmnt:
@@ -3125,6 +3127,18 @@ func (analyzer *TAnalyzer) visitRunStmnt(node *TAst) {
 	analyzer.write("go ", false)
 	analyzer.expression(exprNode)
 	analyzer.stack.Pop()
+}
+
+func (analyzer *TAnalyzer) visitBreak(node *TAst) {
+	if !analyzer.scope.InLoop() {
+		RaiseLanguageCompileError(
+			analyzer.file.Path,
+			analyzer.file.Data,
+			"break statement is not allowed here",
+			node.Position,
+		)
+	}
+	analyzer.write("break", false)
 }
 
 func (analyzer *TAnalyzer) visitReturn(node *TAst) {

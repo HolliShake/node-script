@@ -5,12 +5,13 @@ import "dev/types"
 type TScopeType int
 
 const (
-	ScopeGlobal   TScopeType = iota
-	ScopeLocal    TScopeType = iota
-	ScopeStruct   TScopeType = iota
-	ScopeFunction TScopeType = iota
-	ScopeLoop     TScopeType = iota
-	ScopeSingle   TScopeType = iota
+	ScopeGlobal      TScopeType = iota
+	ScopeLocal       TScopeType = iota
+	ScopeStruct      TScopeType = iota
+	ScopeFunction    TScopeType = iota
+	ScopeLoop        TScopeType = iota
+	ScopeConditional TScopeType = iota
+	ScopeSingle      TScopeType = iota
 )
 
 type TScope struct {
@@ -90,6 +91,11 @@ func (scope *TScope) InFunction() bool {
 func (scope *TScope) InLoop() bool {
 	current := scope
 	for current != nil {
+		// If we encounter a function scope before finding a loop scope,
+		// then we're not in a loop from the perspective of the current scope
+		if current.Type == ScopeFunction {
+			return false
+		}
 		if current.Type == ScopeLoop {
 			return true
 		}
@@ -98,6 +104,24 @@ func (scope *TScope) InLoop() bool {
 	return false
 }
 
+func (scope *TScope) InConditional() bool {
+	current := scope
+	for current != nil {
+		if current.Type == ScopeConditional {
+			return true
+		}
+		current = current.Parent
+	}
+	return false
+}
+
 func (scope *TScope) InSingle() bool {
-	return scope.Type == ScopeSingle
+	current := scope
+	for current != nil {
+		if current.Type == ScopeSingle {
+			return true
+		}
+		current = current.Parent
+	}
+	return false
 }
