@@ -97,5 +97,7 @@ function main(args [str]) i32 {
     arr[0] = 1000 << 6;
     p.Name = "Doy";
     Println(p, arr[0]);
+    arr[0] += 2;
+    arr[0] -= 2;
     return 100;
 }

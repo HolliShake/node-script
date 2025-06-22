@@ -1269,6 +1269,186 @@ func (analyzer *TAnalyzer) expression(node *TAst) {
 			nil,
 			nil,
 		))
+	case AstMulAssign:
+		analyzer.expressionAssignLeft(node.Ast0)
+		leftType := analyzer.stack.Pop().DataType
+		analyzer.write(" *= ", false)
+		analyzer.expression(node.Ast1)
+		rightType := analyzer.stack.Pop().DataType
+		if !types.CanDoArithmetic("*", leftType, rightType) || !types.CanStore(leftType, rightType) {
+			RaiseLanguageCompileError(
+				analyzer.file.Path,
+				analyzer.file.Data,
+				fmt.Sprintf("cannot assign %s to %s", rightType.ToString(), leftType.ToString()),
+				node.Position,
+			)
+		}
+		analyzer.stack.Push(CreateValue(
+			nil,
+			nil,
+		))
+	case AstDivAssign:
+		analyzer.expressionAssignLeft(node.Ast0)
+		leftType := analyzer.stack.Pop().DataType
+		analyzer.write(" /= ", false)
+		analyzer.expression(node.Ast1)
+		rightType := analyzer.stack.Pop().DataType
+		if !types.CanDoArithmetic("/", leftType, rightType) || !types.CanStore(leftType, rightType) {
+			RaiseLanguageCompileError(
+				analyzer.file.Path,
+				analyzer.file.Data,
+				fmt.Sprintf("cannot assign %s to %s", rightType.ToString(), leftType.ToString()),
+				node.Position,
+			)
+		}
+		analyzer.stack.Push(CreateValue(
+			nil,
+			nil,
+		))
+	case AstModAssign:
+		analyzer.expressionAssignLeft(node.Ast0)
+		leftType := analyzer.stack.Pop().DataType
+		analyzer.write(" %= ", false)
+		analyzer.expression(node.Ast1)
+		rightType := analyzer.stack.Pop().DataType
+		if !types.CanDoArithmetic("%", leftType, rightType) || !types.CanStore(leftType, rightType) {
+			RaiseLanguageCompileError(
+				analyzer.file.Path,
+				analyzer.file.Data,
+				fmt.Sprintf("cannot assign %s to %s", rightType.ToString(), leftType.ToString()),
+				node.Position,
+			)
+		}
+		analyzer.stack.Push(CreateValue(
+			nil,
+			nil,
+		))
+	case AstAddAssign:
+		analyzer.expressionAssignLeft(node.Ast0)
+		leftType := analyzer.stack.Pop().DataType
+		analyzer.write(" += ", false)
+		analyzer.expression(node.Ast1)
+		rightType := analyzer.stack.Pop().DataType
+		if !types.CanDoArithmetic("+", leftType, rightType) || !types.CanStore(leftType, rightType) {
+			RaiseLanguageCompileError(
+				analyzer.file.Path,
+				analyzer.file.Data,
+				fmt.Sprintf("cannot assign %s to %s", rightType.ToString(), leftType.ToString()),
+				node.Position,
+			)
+		}
+		analyzer.stack.Push(CreateValue(
+			nil,
+			nil,
+		))
+	case AstSubAssign:
+		analyzer.expressionAssignLeft(node.Ast0)
+		leftType := analyzer.stack.Pop().DataType
+		analyzer.write(" -= ", false)
+		analyzer.expression(node.Ast1)
+		rightType := analyzer.stack.Pop().DataType
+		if !types.CanDoArithmetic("-", leftType, rightType) || !types.CanStore(leftType, rightType) {
+			RaiseLanguageCompileError(
+				analyzer.file.Path,
+				analyzer.file.Data,
+				fmt.Sprintf("cannot assign %s to %s", rightType.ToString(), leftType.ToString()),
+				node.Position,
+			)
+		}
+		analyzer.stack.Push(CreateValue(
+			nil,
+			nil,
+		))
+	case AstShlAssign:
+		analyzer.expressionAssignLeft(node.Ast0)
+		leftType := analyzer.stack.Pop().DataType
+		analyzer.write(" <<= ", false)
+		analyzer.expression(node.Ast1)
+		rightType := analyzer.stack.Pop().DataType
+		if !types.CanDoArithmetic("<<", leftType, rightType) || !types.CanStore(leftType, rightType) {
+			RaiseLanguageCompileError(
+				analyzer.file.Path,
+				analyzer.file.Data,
+				fmt.Sprintf("cannot assign %s to %s", rightType.ToString(), leftType.ToString()),
+				node.Position,
+			)
+		}
+		analyzer.stack.Push(CreateValue(
+			nil,
+			nil,
+		))
+	case AstShrAssign:
+		analyzer.expressionAssignLeft(node.Ast0)
+		leftType := analyzer.stack.Pop().DataType
+		analyzer.write(" >>= ", false)
+		analyzer.expression(node.Ast1)
+		rightType := analyzer.stack.Pop().DataType
+		if !types.CanDoArithmetic(">>", leftType, rightType) || !types.CanStore(leftType, rightType) {
+			RaiseLanguageCompileError(
+				analyzer.file.Path,
+				analyzer.file.Data,
+				fmt.Sprintf("cannot assign %s to %s", rightType.ToString(), leftType.ToString()),
+				node.Position,
+			)
+		}
+		analyzer.stack.Push(CreateValue(
+			nil,
+			nil,
+		))
+	case AstAndAssign:
+		analyzer.expressionAssignLeft(node.Ast0)
+		leftType := analyzer.stack.Pop().DataType
+		analyzer.write(" &= ", false)
+		analyzer.expression(node.Ast1)
+		rightType := analyzer.stack.Pop().DataType
+		if !types.CanDoArithmetic("&", leftType, rightType) || !types.CanStore(leftType, rightType) {
+			RaiseLanguageCompileError(
+				analyzer.file.Path,
+				analyzer.file.Data,
+				fmt.Sprintf("cannot assign %s to %s", rightType.ToString(), leftType.ToString()),
+				node.Position,
+			)
+		}
+		analyzer.stack.Push(CreateValue(
+			nil,
+			nil,
+		))
+	case AstOrAssign:
+		analyzer.expressionAssignLeft(node.Ast0)
+		leftType := analyzer.stack.Pop().DataType
+		analyzer.write(" |= ", false)
+		analyzer.expression(node.Ast1)
+		rightType := analyzer.stack.Pop().DataType
+		if !types.CanDoArithmetic("|", leftType, rightType) || !types.CanStore(leftType, rightType) {
+			RaiseLanguageCompileError(
+				analyzer.file.Path,
+				analyzer.file.Data,
+				fmt.Sprintf("cannot assign %s to %s", rightType.ToString(), leftType.ToString()),
+				node.Position,
+			)
+		}
+		analyzer.stack.Push(CreateValue(
+			nil,
+			nil,
+		))
+	case AstXorAssign:
+		analyzer.expressionAssignLeft(node.Ast0)
+		leftType := analyzer.stack.Pop().DataType
+		analyzer.write(" ^= ", false)
+		analyzer.expression(node.Ast1)
+		rightType := analyzer.stack.Pop().DataType
+		if !types.CanDoArithmetic("^", leftType, rightType) || !types.CanStore(leftType, rightType) {
+			RaiseLanguageCompileError(
+				analyzer.file.Path,
+				analyzer.file.Data,
+				fmt.Sprintf("cannot assign %s to %s", rightType.ToString(), leftType.ToString()),
+				node.Position,
+			)
+		}
+		analyzer.stack.Push(CreateValue(
+			nil,
+			nil,
+		))
 	case AstBindAssign:
 		// Short variable declarations are not allowed in global or single scopes
 		if analyzer.scope.InGlobal() || analyzer.scope.InSingle() {
