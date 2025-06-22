@@ -244,7 +244,6 @@ func (analyzer *TAnalyzer) expressionAssignLeft(node *TAst) {
 				node.Position,
 			)
 		}
-		analyzer.scope.Env.UpdateSymbolIsUsed(node.Str0, true)
 		analyzer.write(symbol.NameSpace, false)
 		analyzer.stack.Push(CreateValue(
 			symbol.DataType,
@@ -2876,6 +2875,67 @@ func (analyzer *TAnalyzer) visitForInit(node *TAst) {
 		AstOrAssign,
 		AstXorAssign:
 		analyzer.expression(node)
+	case AstVar,
+		AstConst,
+		AstLocal:
+		// Convert to shorthand assignment
+		isConst := node.Ttype == AstConst
+		namesNode := node.AstArr0
+		typesNode := node.AstArr1
+		valusNode := node.AstArr2
+		for index, nameNode := range namesNode {
+			typeNode := typesNode[index]
+			dataType := analyzer.getType(typeNode)
+			variableName := nameNode.Str0
+			if analyzer.scope.Env.HasLocalSymbol(variableName) {
+				RaiseLanguageCompileError(
+					analyzer.file.Path,
+					analyzer.file.Data,
+					"invalid for statement, variable name already exists",
+					node.Position,
+				)
+			}
+			analyzer.scope.Env.AddSymbol(TSymbol{
+				Name:         variableName,
+				NameSpace:    variableName,
+				Module:       "",
+				DataType:     dataType,
+				Position:     nameNode.Position,
+				IsGlobal:     false,
+				IsConst:      isConst,
+				IsUsed:       false,
+				IsInitialize: valusNode[index] != nil,
+			})
+			analyzer.write(variableName, false)
+			if index < len(namesNode)-1 {
+				analyzer.write(",", false)
+			}
+		}
+		analyzer.write(" := ", false)
+		for index, valuNode := range valusNode {
+			dataType := analyzer.getType(typesNode[index])
+			if valuNode != nil {
+				analyzer.expression(valuNode)
+				valueType := analyzer.stack.Pop().DataType
+				if !types.CanStore(dataType, valueType) {
+					RaiseLanguageCompileError(
+						analyzer.file.Path,
+						analyzer.file.Data,
+						fmt.Sprintf("cannot assign %s to %s", valueType.ToString(), dataType.ToString()),
+						valuNode.Position,
+					)
+				}
+			} else {
+				analyzer.write(dataType.DefaultValue(), false)
+			}
+			if index < len(valusNode)-1 {
+				analyzer.write(",", false)
+			}
+		}
+		analyzer.stack.Push(CreateValue(
+			nil,
+			nil,
+		))
 	default:
 		RaiseLanguageCompileError(
 			analyzer.file.Path,
@@ -2892,6 +2952,7 @@ func (analyzer *TAnalyzer) visitFor(node *TAst) {
 	conditionNode := node.Ast1
 	muttNode := node.Ast2
 	bodyNode := node.Ast3
+	analyzer.scope = CreateScope(analyzer.scope, ScopeLocal)
 	analyzer.write("for", false)
 	analyzer.srcSp()
 	if !isForIf {
@@ -2918,6 +2979,7 @@ func (analyzer *TAnalyzer) visitFor(node *TAst) {
 				node.Position,
 			)
 		}
+		analyzer.scope = CreateScope(analyzer.scope, ScopeLoop)
 		if bodyNode.Ttype == AstCodeBlock {
 			analyzer.statement(bodyNode)
 		} else {
@@ -2939,6 +3001,7 @@ func (analyzer *TAnalyzer) visitFor(node *TAst) {
 				node.Position,
 			)
 		}
+		analyzer.scope = CreateScope(analyzer.scope, ScopeLoop)
 		analyzer.write("{", true)
 		analyzer.incTb()
 		analyzer.statement(bodyNode)
@@ -2960,6 +3023,24 @@ func (analyzer *TAnalyzer) visitFor(node *TAst) {
 		analyzer.srcTb()
 		analyzer.write("}", false)
 	}
+	// Leave the loop scope
+	analyzer.scope = analyzer.scope.Parent
+
+	// Check if there are any unused variables.
+	env := analyzer.scope.Env
+	for _, symbol := range env.Symbols {
+		if !symbol.IsUsed {
+			RaiseLanguageCompileError(
+				analyzer.file.Path,
+				analyzer.file.Data,
+				fmt.Sprintf("unused variable: %s", symbol.Name),
+				symbol.Position,
+			)
+		}
+	}
+
+	// Leave the Local scope
+	analyzer.scope = analyzer.scope.Parent
 }
 
 func (analyzer *TAnalyzer) visitIf(node *TAst) {
@@ -2997,6 +3078,7 @@ func (analyzer *TAnalyzer) visitIf(node *TAst) {
 
 func (analyzer *TAnalyzer) visitCodeBlock(node *TAst) {
 	statements := node.AstArr0
+	analyzer.scope = CreateScope(analyzer.scope, ScopeLocal)
 	analyzer.write("{", true)
 	analyzer.incTb()
 	for index, statement := range statements {
@@ -3009,6 +3091,22 @@ func (analyzer *TAnalyzer) visitCodeBlock(node *TAst) {
 	analyzer.srcNl()
 	analyzer.srcTb()
 	analyzer.write("}", false)
+
+	// Check if there are any unused variables.
+	env := analyzer.scope.Env
+	for _, symbol := range env.Symbols {
+		if !symbol.IsUsed {
+			RaiseLanguageCompileError(
+				analyzer.file.Path,
+				analyzer.file.Data,
+				fmt.Sprintf("unused variable: %s", symbol.Name),
+				symbol.Position,
+			)
+		}
+	}
+
+	// Leave the Local scope
+	analyzer.scope = analyzer.scope.Parent
 }
 
 func (analyzer *TAnalyzer) visitRunStmnt(node *TAst) {

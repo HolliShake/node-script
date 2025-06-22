@@ -143,12 +143,21 @@ function main(args [str]) i32 {
         arr[0]++;
     if (arr[0] < 5);
 
-    x1 := 1;
-    y1 := 0;
-    for (x1 = 2;x1 < 20; x1,y1 = x1+1,y1+1) {
-        Println(">>", x1);
+
+    local y1 ():void;
+    for (var x1 i32 = 0;y1 != null; x1, y1 = +1,(function() void { Println("Hello!"); })) {
+        Println(">>", x1, y1);
+        x := function(a i32, b i32) i32 {
+            return a + b;
+        };
+        Println(x(1, 2));
     }
     Println(2 + 2);
+
+    {
+        local x i32 = 100;
+        Println(x);
+    }
 
     a, b, c = 4, 5, 6;
     return 100;

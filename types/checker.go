@@ -139,6 +139,23 @@ func IsValidElementType(ttype *TTyping) bool {
 }
 
 func CanStore(dst *TTyping, src *TTyping) bool {
+	// Handle nil (void pointer) case first
+	if IsVoidPointer(src) {
+		// nil can be assigned to any pointer type or function type
+		return IsPointer(dst) || IsFunc(dst) || IsError(dst)
+	}
+
+	// Handle any type destination (can store anything)
+	if IsAny(dst) {
+		return true
+	}
+
+	// Handle exact same type
+	if IsTheSameInstance(dst, src) {
+		return true
+	}
+
+	// Handle numeric type widening
 	if IsInt08(dst) && IsInt08(src) {
 		return true
 	}
@@ -164,6 +181,8 @@ func CanStore(dst *TTyping, src *TTyping) bool {
 		IsNum(src)) {
 		return true
 	}
+
+	// Handle basic types
 	if IsStr(dst) && IsStr(src) {
 		return true
 	}
@@ -173,23 +192,45 @@ func CanStore(dst *TTyping, src *TTyping) bool {
 	if IsVoid(dst) && IsVoid(src) {
 		return true
 	}
-	if IsError(dst) && (IsPointer(src) ||
-		IsError(src)) {
+
+	// Handle error type
+	if IsError(dst) && (IsPointer(src) || IsError(src)) {
 		return true
 	}
-	if (IsPointer(dst) && IsPointer(src)) || (IsPointer(dst) && IsVoidPointer(src)) {
+
+	// Handle pointer types
+	if IsPointer(dst) && IsPointer(src) {
+		// Check if the pointed types are compatible
+		if dst.internal0 != nil && src.internal0 != nil {
+			return CanStore(dst.internal0, src.internal0)
+		}
 		return true
 	}
-	if IsTheSameInstance(dst, src) {
-		return true
-	}
+
+	// Handle array types
 	if IsArr(dst) && IsArr(src) {
+		if dst.internal0 == nil || src.internal0 == nil {
+			return false
+		}
 		return CanStore(dst.internal0, src.internal0)
 	}
+
+	// Handle map types
 	if IsMap(dst) && IsMap(src) {
+		if dst.internal0 == nil ||
+			src.internal0 == nil ||
+			dst.internal1 == nil ||
+			src.internal1 == nil {
+			return false
+		}
 		return CanStore(dst.internal0, src.internal0) && CanStore(dst.internal1, src.internal1)
 	}
+
+	// Handle tuple types
 	if IsTuple(dst) && IsTuple(src) {
+		if len(dst.elements) != len(src.elements) {
+			return false
+		}
 		for i, element := range dst.elements {
 			if !CanStore(element, src.elements[i]) {
 				return false
@@ -197,17 +238,26 @@ func CanStore(dst *TTyping, src *TTyping) bool {
 		}
 		return true
 	}
-	if IsAny(dst) {
-		return true
-	}
+
+	// Handle function types
 	if IsFunc(dst) && IsFunc(src) {
+		// Check if parameter count matches
+		if len(dst.members) != len(src.members) {
+			return false
+		}
+		// Check if parameters are compatible
 		for i, element := range dst.members {
 			if !CanStore(element.DataType, src.members[i].DataType) {
 				return false
 			}
 		}
+		// Check if return types are compatible
+		if dst.internal0 == nil || src.internal0 == nil {
+			return dst.internal0 == src.internal0
+		}
 		return CanStore(dst.internal0, src.internal0)
 	}
+
 	return false
 }
 
@@ -246,17 +296,25 @@ func CanDoArithmetic(opt string, a *TTyping, b *TTyping) bool {
 	case "<":
 		if IsAnyNumber(a) && IsAnyNumber(b) {
 			return true
+		} else if IsStr(a) && IsStr(b) {
+			return true
 		}
 	case "<=":
 		if IsAnyNumber(a) && IsAnyNumber(b) {
+			return true
+		} else if IsStr(a) && IsStr(b) {
 			return true
 		}
 	case ">":
 		if IsAnyNumber(a) && IsAnyNumber(b) {
 			return true
+		} else if IsStr(a) && IsStr(b) {
+			return true
 		}
 	case ">=":
 		if IsAnyNumber(a) && IsAnyNumber(b) {
+			return true
+		} else if IsStr(a) && IsStr(b) {
 			return true
 		}
 	case "==":
@@ -268,6 +326,28 @@ func CanDoArithmetic(opt string, a *TTyping, b *TTyping) bool {
 			return true
 		} else if IsTheSameInstance(a, b) {
 			return true
+		} else if IsVoidPointer(a) && IsVoidPointer(b) {
+			return true
+		} else if IsPointer(a) && IsPointer(b) {
+			return true
+		} else if IsPointer(a) && IsVoidPointer(b) {
+			return true
+		} else if IsVoidPointer(a) && IsPointer(b) {
+			return true
+		} else if IsFunc(a) && (IsFunc(b) || IsVoidPointer(b)) {
+			return true
+		} else if IsVoidPointer(a) && IsFunc(b) {
+			return true
+		} else if IsError(a) && (IsError(b) || IsVoidPointer(b)) {
+			return true
+		} else if IsVoidPointer(a) && IsError(b) {
+			return true
+		} else if IsArr(a) && IsArr(b) && CanStore(a.internal0, b.internal0) {
+			return true
+		} else if IsMap(a) && IsMap(b) &&
+			CanStore(a.internal0, b.internal0) &&
+			CanStore(a.internal1, b.internal1) {
+			return true
 		}
 	case "!=":
 		if IsAnyNumber(a) && IsAnyNumber(b) {
@@ -277,6 +357,28 @@ func CanDoArithmetic(opt string, a *TTyping, b *TTyping) bool {
 		} else if IsBool(a) && IsBool(b) {
 			return true
 		} else if IsTheSameInstance(a, b) {
+			return true
+		} else if IsVoidPointer(a) && IsVoidPointer(b) {
+			return true
+		} else if IsPointer(a) && IsPointer(b) {
+			return true
+		} else if IsPointer(a) && IsVoidPointer(b) {
+			return true
+		} else if IsVoidPointer(a) && IsPointer(b) {
+			return true
+		} else if IsFunc(a) && (IsFunc(b) || IsVoidPointer(b)) {
+			return true
+		} else if IsVoidPointer(a) && IsFunc(b) {
+			return true
+		} else if IsError(a) && (IsError(b) || IsVoidPointer(b)) {
+			return true
+		} else if IsVoidPointer(a) && IsError(b) {
+			return true
+		} else if IsArr(a) && IsArr(b) && CanStore(a.internal0, b.internal0) {
+			return true
+		} else if IsMap(a) && IsMap(b) &&
+			CanStore(a.internal0, b.internal0) &&
+			CanStore(a.internal1, b.internal1) {
 			return true
 		}
 	case "&":

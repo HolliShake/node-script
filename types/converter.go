@@ -32,7 +32,7 @@ func (t *TTyping) DefaultValue() string {
 	case TypeMap:
 		return fmt.Sprintf("make(map[%s]%s, 0)", t.internal0.ToGoType(), t.internal1.ToGoType())
 	case TypeFunc:
-		panic("invalid type or not implemented")
+		return "nil"
 	case TypeStruct,
 		TypeStructInstance:
 		return t.repr + "{}"
