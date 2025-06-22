@@ -17,7 +17,8 @@ type TState struct {
 	TNil       *types.TTyping
 	TErr       *types.TTyping
 	TVoid      *types.TTyping
-	ArrayTypes []*types.TTyping // Array of types
+	ArrayTypes []*TArrayElementTemplate // Array of types
+	MapTypes   []*TMapElementTemplate   // Map of types
 }
 
 func CreateState() *TState {
@@ -33,7 +34,8 @@ func CreateState() *TState {
 	state.TNil = types.ToPointer(types.TVoid())
 	state.TErr = types.TError()
 	state.TVoid = types.TVoid()
-	state.ArrayTypes = make([]*types.TTyping, 0)
+	state.ArrayTypes = make([]*TArrayElementTemplate, 0)
+	state.MapTypes = make([]*TMapElementTemplate, 0)
 	return state
 }
 
@@ -62,7 +64,7 @@ func (state *TState) GetFile(path string) TFileJob {
 
 func (state *TState) ArrayTypeExists(t *types.TTyping) bool {
 	for _, arrayType := range state.ArrayTypes {
-		if arrayType.ToNormalName() == t.ToNormalName() {
+		if arrayType.elementType.ToNormalName() == t.ToNormalName() {
 			return true
 		}
 	}
@@ -70,7 +72,25 @@ func (state *TState) ArrayTypeExists(t *types.TTyping) bool {
 }
 
 func (state *TState) AddArrayType(t *types.TTyping) {
-	state.ArrayTypes = append(state.ArrayTypes, t)
+	newTemplate := new(TArrayElementTemplate)
+	newTemplate.elementType = t
+	state.ArrayTypes = append(state.ArrayTypes, newTemplate)
+}
+
+func (state *TState) MapTypeExists(k *types.TTyping, v *types.TTyping) bool {
+	for _, mapType := range state.MapTypes {
+		if mapType.keyType.ToNormalName() == k.ToNormalName() && mapType.valueType.ToNormalName() == v.ToNormalName() {
+			return true
+		}
+	}
+	return false
+}
+
+func (state *TState) AddMapType(k *types.TTyping, v *types.TTyping) {
+	newTemplate := new(TMapElementTemplate)
+	newTemplate.keyType = k
+	newTemplate.valueType = v
+	state.MapTypes = append(state.MapTypes, newTemplate)
 }
 
 func (state *TState) GenerateArrays() string {
@@ -82,9 +102,23 @@ func (state *TState) GenerateArrays() string {
 	code += "\n)"
 	code += "\n\n"
 	for _, arrayType := range state.ArrayTypes {
-		code += GenerateArrayCode(arrayType)
+		code += GenerateArrayCode(arrayType.elementType)
 		code += "\n\n"
 	}
 
+	return code
+}
+
+func (state *TState) GenerateMaps() string {
+	code := "package main"
+	code += "\n\n"
+	code += "import ("
+	code += "\n\t\"fmt\""
+	code += "\n)"
+	code += "\n\n"
+	for _, mapType := range state.MapTypes {
+		code += GenerateMapCode(mapType.keyType, mapType.valueType)
+		code += "\n\n"
+	}
 	return code
 }

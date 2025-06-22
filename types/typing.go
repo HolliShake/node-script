@@ -278,6 +278,19 @@ func THashMap(key *TTyping, val *TTyping) *TTyping {
 	typing := CreateTyping("[OVERRIDEME]", TypeMap)
 	typing.internal0 = key
 	typing.internal1 = val
+
+	// Get method
+	get_method := CreatePairWithNamespace("Get", "Get", TFunc(false, []*TPair{CreatePair("key", key)}, val, false))
+	typing.methods = append(typing.methods, get_method)
+
+	// Set method
+	set_method := CreatePairWithNamespace("Set", "Set", TFunc(false, []*TPair{CreatePair("key", key), CreatePair("value", val)}, TVoid(), false))
+	typing.methods = append(typing.methods, set_method)
+
+	// Delete method
+	delete_method := CreatePairWithNamespace("Delete", "Delete", TFunc(false, []*TPair{CreatePair("key", key)}, TVoid(), false))
+	typing.methods = append(typing.methods, delete_method)
+
 	return typing
 }
 

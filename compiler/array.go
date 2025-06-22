@@ -5,6 +5,12 @@ import (
 	"strings"
 )
 
+// Array wrapper
+// This is a wrapper for the array type.
+// It is used to store the array type in the state.
+// It is also used to generate the array code.
+// It is also used to generate the array code.
+
 const ArrayCode string = `
 type Array{{TypeName}} struct {
 	elements []{{GoType}}
@@ -67,11 +73,15 @@ func (arr *Array{{TypeName}}) String() string {
 }
 `
 
-func GetHeader(t *types.TTyping) string {
+type TArrayElementTemplate struct {
+	elementType *types.TTyping
+}
+
+func GetArrayHeader(t *types.TTyping) string {
 	return "Array" + t.ToNormalName()
 }
 
-func GetConstructor(t *types.TTyping) string {
+func GetArrayConstructor(t *types.TTyping) string {
 	code := "NewArray" + t.ToNormalName()
 	return code
 }

@@ -165,6 +165,9 @@ func (analyzer *TAnalyzer) getType(node *TAst) *types.TTyping {
 				valAst.Position,
 			)
 		}
+		if !analyzer.state.MapTypeExists(keyType, valType) {
+			analyzer.state.AddMapType(keyType, valType)
+		}
 		return types.THashMap(keyType, valType)
 	case AstTypePointer:
 		elementAst := node.Ast0
@@ -261,6 +264,10 @@ func (analyzer *TAnalyzer) expressionAssignLeft(node *TAst) {
 			elementType = objectType.GetInternal0()
 			analyzer.write(".", false)
 			analyzer.write("elements", false)
+		} else if types.IsMap(objectType) {
+			elementType = objectType.GetInternal1()
+			analyzer.write(".", false)
+			analyzer.write("elements", false)
 		} else {
 			RaiseLanguageCompileError(
 				analyzer.file.Path,
@@ -277,6 +284,13 @@ func (analyzer *TAnalyzer) expressionAssignLeft(node *TAst) {
 				analyzer.file.Path,
 				analyzer.file.Data,
 				fmt.Sprintf("array index must be an integer, got %s", indexType.ToString()),
+				node.Position,
+			)
+		} else if types.IsMap(objectType) && !types.IsTheSameInstance(indexType, objectType.GetInternal0()) {
+			RaiseLanguageCompileError(
+				analyzer.file.Path,
+				analyzer.file.Data,
+				fmt.Sprintf("map index must be %s, got %s", objectType.GetInternal0().ToString(), indexType.ToString()),
 				node.Position,
 			)
 		}
@@ -423,7 +437,7 @@ func (analyzer *TAnalyzer) expression(node *TAst) {
 		// Restore
 		analyzer.src = saveSrc
 		analyzer.stack = saveStack
-		analyzer.write(GetConstructor(elementType), false)
+		analyzer.write(GetArrayConstructor(elementType), false)
 		analyzer.write("(", false)
 		analyzer.write("[]", false)
 		analyzer.write(elementType.ToGoType(), false)
@@ -450,6 +464,95 @@ func (analyzer *TAnalyzer) expression(node *TAst) {
 		}
 		analyzer.stack.Push(CreateValue(
 			types.TArray(elementType),
+			nil,
+		))
+	case AstHashMap:
+		keysNode := node.AstArr0
+		valuesNode := node.AstArr1
+		var keyType *types.TTyping = nil
+		var valueType *types.TTyping = nil
+		// Save
+		saveSrc := analyzer.src
+		analyzer.src = ""
+		for index, keyNode := range keysNode {
+			valueNode := valuesNode[index]
+			analyzer.expression(keyNode)
+			newKeyType := analyzer.stack.Pop().DataType
+			if keyType == nil {
+				keyType = newKeyType
+			} else if !types.CanStore(keyType, newKeyType) {
+				RaiseLanguageCompileError(
+					analyzer.file.Path,
+					analyzer.file.Data,
+					fmt.Sprintf("cannot store %s in map of [%s]", newKeyType.ToString(), keyType.ToString()),
+					keyNode.Position,
+				)
+			}
+			analyzer.write(":", false)
+			analyzer.expression(valueNode)
+			newValueType := analyzer.stack.Pop().DataType
+			if valueType == nil {
+				valueType = newValueType
+			} else if !types.CanStore(valueType, newValueType) {
+				RaiseLanguageCompileError(
+					analyzer.file.Path,
+					analyzer.file.Data,
+					fmt.Sprintf("cannot store %s in map of [%s]", newValueType.ToString(), valueType.ToString()),
+					valueNode.Position,
+				)
+			}
+			if index < len(keysNode)-1 {
+				analyzer.write(", ", false)
+			}
+		}
+		analyzer.src = saveSrc
+		// Finalize
+		analyzer.write(GetMapConstructor(keyType, valueType), false)
+		analyzer.write("(", false)
+		analyzer.write("map", false)
+		analyzer.write("[", false)
+		analyzer.write(keyType.ToGoType(), false)
+		analyzer.write("]", false)
+		analyzer.write(valueType.ToGoType(), false)
+		analyzer.write("{", false)
+		for index, keyNode := range keysNode {
+			valueNode := valuesNode[index]
+			analyzer.expression(keyNode)
+			newKeyType := analyzer.stack.Pop().DataType
+			if keyType == nil {
+				keyType = newKeyType
+			} else if !types.CanStore(keyType, newKeyType) {
+				RaiseLanguageCompileError(
+					analyzer.file.Path,
+					analyzer.file.Data,
+					fmt.Sprintf("cannot store %s in map of [%s]", newKeyType.ToString(), keyType.ToString()),
+					keyNode.Position,
+				)
+			}
+			analyzer.write(":", false)
+			analyzer.expression(valueNode)
+			newValueType := analyzer.stack.Pop().DataType
+			if valueType == nil {
+				valueType = newValueType
+			} else if !types.CanStore(valueType, newValueType) {
+				RaiseLanguageCompileError(
+					analyzer.file.Path,
+					analyzer.file.Data,
+					fmt.Sprintf("cannot store %s in map of [%s]", newValueType.ToString(), valueType.ToString()),
+					valueNode.Position,
+				)
+			}
+			if index < len(keysNode)-1 {
+				analyzer.write(", ", false)
+			}
+		}
+		analyzer.write("}", false)
+		analyzer.write(")", false)
+		if !analyzer.state.MapTypeExists(keyType, valueType) {
+			analyzer.state.AddMapType(keyType, valueType)
+		}
+		analyzer.stack.Push(CreateValue(
+			types.THashMap(keyType, valueType),
 			nil,
 		))
 	case AstPlus2:
@@ -532,9 +635,13 @@ func (analyzer *TAnalyzer) expression(node *TAst) {
 		analyzer.expression(objectNode)
 		objectType := analyzer.stack.Pop().DataType
 		var elementType *types.TTyping = nil
-		isArray := types.IsArr(objectType)
+		isArrayOrMap := types.IsArr(objectType) || types.IsMap(objectType)
 		if types.IsArr(objectType) {
 			elementType = objectType.GetInternal0()
+			analyzer.write(".", false)
+			analyzer.write("Get", false)
+		} else if types.IsMap(objectType) {
+			elementType = objectType.GetInternal1()
 			analyzer.write(".", false)
 			analyzer.write("Get", false)
 		} else if types.IsStr(objectType) {
@@ -547,7 +654,7 @@ func (analyzer *TAnalyzer) expression(node *TAst) {
 				node.Position,
 			)
 		}
-		if isArray {
+		if isArrayOrMap {
 			analyzer.write("(", false)
 		} else {
 			analyzer.write("[", false)
@@ -561,6 +668,13 @@ func (analyzer *TAnalyzer) expression(node *TAst) {
 				fmt.Sprintf("array index must be an integer, got %s", indexType.ToString()),
 				node.Position,
 			)
+		} else if types.IsMap(objectType) && !types.IsTheSameInstance(indexType, objectType.GetInternal0()) {
+			RaiseLanguageCompileError(
+				analyzer.file.Path,
+				analyzer.file.Data,
+				fmt.Sprintf("map index must be %s, got %s", objectType.GetInternal0().ToString(), indexType.ToString()),
+				node.Position,
+			)
 		} else if types.IsStr(objectType) && !types.IsAnyInt(indexType) {
 			RaiseLanguageCompileError(
 				analyzer.file.Path,
@@ -569,7 +683,7 @@ func (analyzer *TAnalyzer) expression(node *TAst) {
 				node.Position,
 			)
 		}
-		if isArray {
+		if isArrayOrMap {
 			analyzer.write(")", false)
 		} else {
 			analyzer.write("]", false)
@@ -2163,7 +2277,7 @@ func (analyzer *TAnalyzer) visitImport(node *TAst) {
 						"%s %s = %s(%s.%s)",
 						info.NameSpace,
 						asVar.dataType.ToGoType(),
-						GetConstructor(elementType),
+						GetArrayConstructor(elementType),
 						pkg, asVar.name,
 					), true)
 				} else {
@@ -2742,7 +2856,7 @@ func (analyzer *TAnalyzer) program(node *TAst) {
 	analyzer.incTb()
 	analyzer.srcTb()
 	analyzer.write(
-		fmt.Sprintf("%s(%s(os.Args))", mainFunc.NameSpace, GetConstructor(paramType.GetInternal0())),
+		fmt.Sprintf("%s(%s(os.Args))", mainFunc.NameSpace, GetArrayConstructor(paramType.GetInternal0())),
 		false,
 	)
 	analyzer.decTb()

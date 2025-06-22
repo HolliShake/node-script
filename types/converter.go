@@ -120,7 +120,10 @@ func (t *TTyping) GoTypePure(pure bool) string {
 		}
 		return "*Array" + t.internal0.ToNormalName()
 	case TypeMap:
-		return "map[" + t.internal0.GoTypePure(pure) + "]" + t.internal1.GoTypePure(pure)
+		if pure {
+			return "map[" + t.internal0.GoTypePure(pure) + "]" + t.internal1.GoTypePure(pure)
+		}
+		return "*Map" + t.internal0.ToNormalName() + t.internal1.ToNormalName()
 	case TypeFunc:
 		returnType := t.internal0.GoTypePure(pure)
 		parameters := make([]string, len(t.members))

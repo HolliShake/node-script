@@ -130,6 +130,13 @@ func processFile(goBinding *TGoBinding, path string) {
 	arrayCode := tstate.GenerateArrays()
 	ok, err := goBinding.Generate("arrays.go", arrayCode)
 
+	// Generate maps
+	mapCode := tstate.GenerateMaps()
+	ok, err = goBinding.Generate("maps.go", mapCode)
+	if err != nil || !ok {
+		RaiseSystemError(fmt.Sprintf("error generating maps.go: %s", err))
+	}
+
 	// Signal the goroutine to stop
 	done <- true
 

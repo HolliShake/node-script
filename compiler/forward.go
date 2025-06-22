@@ -273,6 +273,29 @@ func (f *TForward) getType(fileJob TFileJob, node *TAst) *types.TTyping {
 			elementTypes = append(elementTypes, elementType)
 		}
 		return types.TTuple(elementTypes)
+	case AstTypeArray:
+		elementAst := node.Ast0
+		elementType := f.getType(fileJob, elementAst)
+		if elementType == nil {
+			f.pushMissingTypes(TMissingTypeJob{
+				file:    fileJob,
+				NameAst: elementAst, // For this time, Pass the valAst here.
+				TypeAst: elementAst,
+			})
+			return nil
+		}
+		if types.IsVoid(elementType) {
+			RaiseLanguageCompileError(
+				fileJob.Path,
+				fileJob.Data,
+				INVALID_ARRAY_ELEMENT_TYPE,
+				elementAst.Position,
+			)
+		}
+		if !f.State.ArrayTypeExists(elementType) {
+			f.State.AddArrayType(elementType)
+		}
+		return types.TArray(elementType)
 	case AstTypeHashMap:
 		keyAst := node.Ast0
 		valAst := node.Ast1
@@ -311,27 +334,10 @@ func (f *TForward) getType(fileJob TFileJob, node *TAst) *types.TTyping {
 				valAst.Position,
 			)
 		}
+		if !f.State.MapTypeExists(keyType, valType) {
+			f.State.AddMapType(keyType, valType)
+		}
 		return types.THashMap(keyType, valType)
-	case AstTypeArray:
-		elementAst := node.Ast0
-		elementType := f.getType(fileJob, elementAst)
-		if elementType == nil {
-			f.pushMissingTypes(TMissingTypeJob{
-				file:    fileJob,
-				NameAst: elementAst, // For this time, Pass the valAst here.
-				TypeAst: elementAst,
-			})
-			return nil
-		}
-		if types.IsVoid(elementType) {
-			RaiseLanguageCompileError(
-				fileJob.Path,
-				fileJob.Data,
-				INVALID_ARRAY_ELEMENT_TYPE,
-				elementAst.Position,
-			)
-		}
-		return types.TArray(elementType)
 	case AstTypePointer:
 		elementAst := node.Ast0
 		elementType := f.getType(fileJob, elementAst)
