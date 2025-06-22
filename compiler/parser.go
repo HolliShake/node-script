@@ -700,27 +700,28 @@ func (parser *TParser) baseType() *TAst {
 		}
 		parser.acceptV(")")
 		ended = parser.look.Position
-		if parser.matchV(":") {
-			returnNode := parser.typeOrNil()
-			ended = returnNode.Position
-			if returnNode == nil {
-				RaiseLanguageCompileError(
-					parser.Tokenizer.File,
-					parser.Tokenizer.Data,
-					"missing return type",
-					parser.look.Position,
-				)
-			}
-			return AstSingleWithArray(
-				AstTypeFunc,
+		if !parser.matchV(":") {
+			return AstSingleArray(
+				AstTypeTuple,
 				start.Merge(ended),
-				returnNode,
 				argumentTypes,
 			)
 		}
-		return AstSingleArray(
-			AstTypeTuple,
+		// FunctionType
+		returnNode := parser.typeOrNil()
+		ended = returnNode.Position
+		if returnNode == nil {
+			RaiseLanguageCompileError(
+				parser.Tokenizer.File,
+				parser.Tokenizer.Data,
+				"missing return type",
+				parser.look.Position,
+			)
+		}
+		return AstSingleWithArray(
+			AstTypeFunc,
 			start.Merge(ended),
+			returnNode,
 			argumentTypes,
 		)
 	} else if parser.matchT(TokenKEY) && parser.matchV(KeyInt8) {
