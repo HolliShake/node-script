@@ -29,9 +29,9 @@ function (p Person) GetPet() void panics {
 const Kill str = "adadaasdas";
 
 var Permute (i32):num = 
-    function(a i32) num {
-        return 2.0;
-    };
+function(a i32) num {
+    return 2.0;
+};
 
 function add(a i32, b i32) i32 panics {
     panic(">> Damn..");

@@ -247,8 +247,16 @@ func TTuple(elements []*TTyping) *TTyping {
 	return typing
 }
 
+func TArrayNoConstructor(element *TTyping) *TTyping {
+	typing := CreateTyping("[OVERRIDEME]", TypeArr)
+	typing.hasConstructor = false
+	typing.internal0 = element
+	return typing
+}
+
 func TArray(element *TTyping) *TTyping {
 	typing := CreateTyping("[OVERRIDEME]", TypeArr)
+	typing.hasConstructor = true
 	typing.internal0 = element
 
 	// Push method
@@ -279,6 +287,14 @@ func TArray(element *TTyping) *TTyping {
 	some_method := CreatePairWithNamespace("Some", "Some", TFunc(false, []*TPair{CreatePair("callback", TFunc(false, []*TPair{CreatePair("index", TInt64()), CreatePair("value", element)}, TBool(), false))}, TBool(), false))
 	typing.methods = append(typing.methods, some_method)
 
+	return typing
+}
+
+func THashMapNoConstructor(key *TTyping, val *TTyping) *TTyping {
+	typing := CreateTyping("[OVERRIDEME]", TypeMap)
+	typing.hasConstructor = false
+	typing.internal0 = key
+	typing.internal1 = val
 	return typing
 }
 
@@ -391,7 +407,7 @@ func TFromGo(goType string) *TTyping {
 		if elementType == nil {
 			return nil
 		}
-		return TArray(elementType)
+		return TArrayNoConstructor(elementType)
 	}
 
 	if strings.HasPrefix(goType, "map") {
@@ -404,7 +420,7 @@ func TFromGo(goType string) *TTyping {
 		if k == nil || v == nil {
 			return nil
 		}
-		return THashMap(k, v)
+		return THashMapNoConstructor(k, v)
 	}
 
 	if strings.HasPrefix(goType, "func") {
