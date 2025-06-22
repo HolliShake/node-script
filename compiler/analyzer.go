@@ -189,6 +189,112 @@ func (analyzer *TAnalyzer) getType(node *TAst) *types.TTyping {
 	return nil
 }
 
+func (analyzer *TAnalyzer) expressionAssignLeft(node *TAst) {
+	switch node.Ttype {
+	case AstIDN:
+		if !analyzer.scope.Env.HasGlobalSymbol(node.Str0) {
+			RaiseLanguageCompileError(
+				analyzer.file.Path,
+				analyzer.file.Data,
+				fmt.Sprintf("undefined symbol: %s", node.Str0),
+				node.Position,
+			)
+		}
+		symbol := analyzer.scope.Env.GetSymbol(node.Str0)
+		if symbol.IsConst {
+			RaiseLanguageCompileError(
+				analyzer.file.Path,
+				analyzer.file.Data,
+				fmt.Sprintf("cannot assign to constant symbol: %s", node.Str0),
+				node.Position,
+			)
+		}
+		if types.IsStruct(symbol.DataType) {
+			RaiseLanguageCompileError(
+				analyzer.file.Path,
+				analyzer.file.Data,
+				fmt.Sprintf("cannot assign to struct symbol: %s", node.Str0),
+				node.Position,
+			)
+		}
+		analyzer.scope.Env.UpdateSymbolIsUsed(node.Str0, true)
+		analyzer.write(symbol.NameSpace, false)
+		analyzer.stack.Push(CreateValue(
+			symbol.DataType,
+			nil,
+		))
+	case AstMember:
+		objectNode := node.Ast0
+		memberNode := node.Ast1
+		if memberNode.Ttype != AstIDN {
+			RaiseLanguageCompileError(
+				analyzer.file.Path,
+				analyzer.file.Data,
+				"member name must be an identifier",
+				memberNode.Position,
+			)
+		}
+		analyzer.expression(objectNode)
+		objectType := analyzer.stack.Pop().DataType
+		if !objectType.HasMember(memberNode.Str0) {
+			RaiseLanguageCompileError(
+				analyzer.file.Path,
+				analyzer.file.Data,
+				fmt.Sprintf("object %s has no member %s", objectType.ToString(), memberNode.Str0),
+				memberNode.Position,
+			)
+		}
+		analyzer.write(".", false)
+		analyzer.write(memberNode.Str0, false)
+		member := objectType.GetMember(memberNode.Str0)
+		analyzer.stack.Push(CreateValue(
+			member.DataType,
+			nil,
+		))
+	case AstIndex:
+		objectNode := node.Ast0
+		indexNode := node.Ast1
+		analyzer.expression(objectNode)
+		objectType := analyzer.stack.Pop().DataType
+		var elementType *types.TTyping = nil
+		if types.IsArr(objectType) {
+			elementType = objectType.GetInternal0()
+			analyzer.write(".", false)
+			analyzer.write("elements", false)
+		} else {
+			RaiseLanguageCompileError(
+				analyzer.file.Path,
+				analyzer.file.Data,
+				fmt.Sprintf("cannot assign to %s", objectType.ToString()),
+				node.Position,
+			)
+		}
+		analyzer.write("[", false)
+		analyzer.expression(indexNode)
+		indexType := analyzer.stack.Pop().DataType
+		if types.IsArr(indexType) && !types.IsAnyInt(indexType) {
+			RaiseLanguageCompileError(
+				analyzer.file.Path,
+				analyzer.file.Data,
+				fmt.Sprintf("array index must be an integer, got %s", indexType.ToString()),
+				node.Position,
+			)
+		}
+		analyzer.write("]", false)
+		analyzer.stack.Push(CreateValue(
+			elementType,
+			nil,
+		))
+	default:
+		RaiseLanguageCompileError(
+			analyzer.file.Path,
+			analyzer.file.Data,
+			"invalid left-hand side of assignment",
+			node.Position,
+		)
+	}
+}
+
 func (analyzer *TAnalyzer) expression(node *TAst) {
 	switch node.Ttype {
 	case AstIDN:
@@ -386,6 +492,58 @@ func (analyzer *TAnalyzer) expression(node *TAst) {
 		member := objectValue.DataType.GetMember(memberNode.Str0)
 		analyzer.stack.Push(CreateValue(
 			member.DataType,
+			nil,
+		))
+	case AstIndex:
+		objectNode := node.Ast0
+		indexNode := node.Ast1
+		analyzer.expression(objectNode)
+		objectType := analyzer.stack.Pop().DataType
+		var elementType *types.TTyping = nil
+		isArray := types.IsArr(objectType)
+		if types.IsArr(objectType) {
+			elementType = objectType.GetInternal0()
+			analyzer.write(".", false)
+			analyzer.write("Get", false)
+		} else if types.IsStr(objectType) {
+			elementType = analyzer.state.TI08
+		} else {
+			RaiseLanguageCompileError(
+				analyzer.file.Path,
+				analyzer.file.Data,
+				fmt.Sprintf("cannot assign to %s", objectType.ToString()),
+				node.Position,
+			)
+		}
+		if isArray {
+			analyzer.write("(", false)
+		} else {
+			analyzer.write("[", false)
+		}
+		analyzer.expression(indexNode)
+		indexType := analyzer.stack.Pop().DataType
+		if types.IsArr(objectType) && !types.IsAnyInt(indexType) {
+			RaiseLanguageCompileError(
+				analyzer.file.Path,
+				analyzer.file.Data,
+				fmt.Sprintf("array index must be an integer, got %s", indexType.ToString()),
+				node.Position,
+			)
+		} else if types.IsStr(objectType) && !types.IsAnyInt(indexType) {
+			RaiseLanguageCompileError(
+				analyzer.file.Path,
+				analyzer.file.Data,
+				fmt.Sprintf("string index must be an integer, got %s", indexType.ToString()),
+				node.Position,
+			)
+		}
+		if isArray {
+			analyzer.write(")", false)
+		} else {
+			analyzer.write("]", false)
+		}
+		analyzer.stack.Push(CreateValue(
+			elementType,
 			nil,
 		))
 	case AstCall:
@@ -1091,6 +1249,24 @@ func (analyzer *TAnalyzer) expression(node *TAst) {
 		}
 		analyzer.stack.Push(CreateValue(
 			analyzer.state.TBit,
+			nil,
+		))
+	case AstAssign:
+		analyzer.expressionAssignLeft(node.Ast0)
+		leftType := analyzer.stack.Pop().DataType
+		analyzer.write(" = ", false)
+		analyzer.expression(node.Ast1)
+		rightType := analyzer.stack.Pop().DataType
+		if !types.CanStore(leftType, rightType) {
+			RaiseLanguageCompileError(
+				analyzer.file.Path,
+				analyzer.file.Data,
+				fmt.Sprintf("cannot assign %s to %s", rightType.ToString(), leftType.ToString()),
+				node.Position,
+			)
+		}
+		analyzer.stack.Push(CreateValue(
+			nil,
 			nil,
 		))
 	case AstBindAssign:

@@ -79,7 +79,7 @@ function main(args [str]) i32 {
         },
         IsGay: if (v > 10) true else false
     };
-    println(if (3 < 2) "Hello" else "22");
+    println(if (3 < 2) "Hello" else "22"); 
     println(p);
     local intptr i32* = null;
     println(intptr);
@@ -94,5 +94,8 @@ function main(args [str]) i32 {
         else 
             "false";
     println(label);
+    arr[0] = 1000 << 6;
+    p.Name = "Doy";
+    Println(p, arr[0]);
     return 100;
 }
