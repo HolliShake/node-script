@@ -1898,6 +1898,8 @@ func (analyzer *TAnalyzer) statement(node *TAst) {
 		analyzer.visitConst(node)
 	case AstLocal:
 		analyzer.visitLocal(node)
+	case AstIf:
+		analyzer.visitIf(node)
 	case AstRunStmnt:
 		analyzer.visitRunStmnt(node)
 	case AstReturnStmnt:
@@ -1919,10 +1921,9 @@ func (analyzer *TAnalyzer) statement(node *TAst) {
 		analyzer.expression(node.Ast0)
 		value := analyzer.stack.Pop()
 		// Prevent standalone identifiers and constants that have no effect
-		if (node.Ast0.Ttype == AstIDN ||
-			node.Ast0.Ttype == AstCall ||
-			IsConstantValueNode(node.Ast0)) &&
-			(!types.IsVoid(value.DataType) && !types.IsTuple(value.DataType)) {
+		if IsNoEffectValueNode(node.Ast0) &&
+			!types.IsVoid(value.DataType) &&
+			!types.IsTuple(value.DataType) {
 			RaiseLanguageCompileError(
 				analyzer.file.Path,
 				analyzer.file.Data,
@@ -2840,6 +2841,41 @@ func (analyzer *TAnalyzer) visitLocal(node *TAst) {
 	analyzer.srcNl()
 	analyzer.srcTb()
 	analyzer.write(")", false)
+}
+
+func (analyzer *TAnalyzer) visitIf(node *TAst) {
+	conditionNode := node.Ast0
+	thenNode := node.Ast1
+	elseNode := node.Ast2
+	analyzer.write("if", false)
+	analyzer.srcSp()
+	analyzer.expression(conditionNode)
+	analyzer.stack.Pop()
+	analyzer.srcSp()
+	if thenNode.Ttype == AstCodeBlock {
+		analyzer.statement(thenNode)
+	} else {
+		analyzer.write("{", false)
+		analyzer.incTb()
+		analyzer.srcTb()
+		analyzer.statement(thenNode)
+		analyzer.decTb()
+		analyzer.srcNl()
+		analyzer.srcTb()
+		analyzer.write("}", false)
+	}
+	if elseNode != nil {
+		analyzer.write("else", false)
+		analyzer.srcSp()
+		analyzer.write("{", false)
+		analyzer.incTb()
+		analyzer.srcTb()
+		analyzer.statement(elseNode)
+		analyzer.decTb()
+		analyzer.srcNl()
+		analyzer.srcTb()
+		analyzer.write("}", false)
+	}
 }
 
 func (analyzer *TAnalyzer) visitRunStmnt(node *TAst) {

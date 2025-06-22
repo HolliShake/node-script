@@ -240,35 +240,46 @@ func AstBlock(ttype AstType, position TPosition, children []*TAst) *TAst {
 	return ast
 }
 
-func IsConstantValueNode(node *TAst) bool {
-	if node.Ttype == AstInt || node.Ttype == AstNum || node.Ttype == AstStr || node.Ttype == AstBool || node.Ttype == AstNull {
+func IsNoEffectValueNode(node *TAst) bool {
+	switch node.Ttype {
+	case AstIDN, AstInt, AstNum, AstStr, AstBool, AstNull:
 		return true
-	} else if node.Ttype == AstAdd ||
-		node.Ttype == AstSub ||
-		node.Ttype == AstMul ||
-		node.Ttype == AstDiv ||
-		node.Ttype == AstMod ||
-		node.Ttype == AstShl ||
-		node.Ttype == AstShr ||
-		node.Ttype == AstLt ||
-		node.Ttype == AstLe ||
-		node.Ttype == AstGt ||
-		node.Ttype == AstGe ||
-		node.Ttype == AstEq ||
-		node.Ttype == AstNe ||
-		node.Ttype == AstAnd ||
-		node.Ttype == AstOr ||
-		node.Ttype == AstXor ||
-		node.Ttype == AstLogAnd ||
-		node.Ttype == AstLogOr {
-		return IsConstantValueNode(node.Ast0) && IsConstantValueNode(node.Ast1)
-	} else if node.Ttype == AstArray {
+	case AstIndex, AstMember, AstCall:
+		return true
+	case AstTupleExpression:
 		for _, child := range node.AstArr0 {
 			if !IsConstantValueNode(child) {
 				return false
 			}
 		}
 		return true
+	case AstArray:
+		for _, child := range node.AstArr0 {
+			if !IsConstantValueNode(child) {
+				return false
+			}
+		}
+		return true
+	case AstHashMap:
+		for index, child := range node.AstArr0 {
+			valueNode := node.AstArr1[index]
+			if !IsConstantValueNode(child) || !IsConstantValueNode(valueNode) {
+				return false
+			}
+		}
+		return true
+	case AstAdd, AstSub, AstMul, AstDiv, AstMod, AstShl, AstShr, AstLt, AstLe, AstGt, AstGe, AstEq, AstNe, AstAnd, AstOr, AstXor, AstLogAnd, AstLogOr:
+		return IsConstantValueNode(node.Ast0) && IsConstantValueNode(node.Ast1)
+	}
+	return IsConstantValueNode(node)
+}
+
+func IsConstantValueNode(node *TAst) bool {
+	switch node.Ttype {
+	case AstInt, AstNum, AstStr, AstBool, AstNull:
+		return true
+	case AstAdd, AstSub, AstMul, AstDiv, AstMod, AstShl, AstShr, AstLt, AstLe, AstGt, AstGe, AstEq, AstNe, AstAnd, AstOr, AstXor, AstLogAnd, AstLogOr:
+		return IsConstantValueNode(node.Ast0) && IsConstantValueNode(node.Ast1)
 	}
 	return false
 }

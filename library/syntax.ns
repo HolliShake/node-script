@@ -132,7 +132,14 @@ function main(args [str]) i32 {
     arr.Each(function(index i64, value i32) void {
         Println(index, value << index);
     });
+
     Println(Permute(20));
+
+    if (3 > 3) 
+        2 + 3;
+    else
+        3 + 3;
+
     return 100;
 }
 
