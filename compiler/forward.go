@@ -350,6 +350,30 @@ func (f *TForward) getType(fileJob TFileJob, node *TAst) *types.TTyping {
 			return nil
 		}
 		return types.ToPointer(elementType)
+	case AstTypeFunc:
+		argumentTypes := make([]*types.TPair, 0)
+		for index, argumentAst := range node.AstArr0 {
+			argumentType := f.getType(fileJob, argumentAst)
+			if argumentType == nil {
+				f.pushMissingTypes(TMissingTypeJob{
+					file:    fileJob,
+					NameAst: argumentAst,
+					TypeAst: argumentAst,
+				})
+				return nil
+			}
+			argumentTypes = append(argumentTypes, types.CreatePair(fmt.Sprintf("$%d", index), argumentType))
+		}
+		returnType := f.getType(fileJob, node.Ast0)
+		if returnType == nil {
+			f.pushMissingTypes(TMissingTypeJob{
+				file:    fileJob,
+				NameAst: node.Ast0,
+				TypeAst: node.Ast0,
+			})
+			return nil
+		}
+		return types.TFunc(false, argumentTypes, returnType, false)
 	}
 	return nil
 }

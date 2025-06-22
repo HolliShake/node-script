@@ -28,6 +28,11 @@ function (p Person) GetPet() void panics {
 
 const Kill str = "adadaasdas";
 
+var Permute (i32):num = 
+    function(a i32) num {
+        return 2.0;
+    };
+
 function add(a i32, b i32) i32 panics {
     panic(">> Damn..");
     return a + b;
@@ -55,7 +60,7 @@ function addFn(a i32, b i32) i32 {
 }
 
 function main(args [str]) i32 {
-    local g num = 1000 + 20.2;
+    local g i32 = 1000 + 2;
     a, b, c := 1, 2, 3;
     println(
         "Hello, World!",
@@ -121,11 +126,13 @@ function main(args [str]) i32 {
     Println(mp);
     mp.Delete("Three");
     Println(mp);
+
+    arr[0] = 1;
    
     arr.Each(function(index i64, value i32) void {
-        Println(index, value * index);
+        Println(index, value << index);
     });
-
+    Println(Permute(20));
     return 100;
 }
 
