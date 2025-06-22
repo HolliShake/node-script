@@ -6,19 +6,19 @@ import (
 
 type TState struct {
 	// The current state of the parser
-	Files      []TFileJob
-	TI08       *types.TTyping
-	TI16       *types.TTyping
-	TI32       *types.TTyping
-	TI64       *types.TTyping
-	TNum       *types.TTyping
-	TStr       *types.TTyping
-	TBit       *types.TTyping
-	TNil       *types.TTyping
-	TErr       *types.TTyping
-	TVoid      *types.TTyping
-	ArrayTypes []*TArrayElementTemplate // Array of types
-	MapTypes   []*TMapElementTemplate   // Map of types
+	Files     []TFileJob
+	TI08      *types.TTyping
+	TI16      *types.TTyping
+	TI32      *types.TTyping
+	TI64      *types.TTyping
+	TNum      *types.TTyping
+	TStr      *types.TTyping
+	TBit      *types.TTyping
+	TNil      *types.TTyping
+	TErr      *types.TTyping
+	TVoid     *types.TTyping
+	ListTypes []*TArrayElementTemplate // Array of types
+	MapTypes  []*TMapElementTemplate   // Map of types
 }
 
 func CreateState() *TState {
@@ -34,7 +34,7 @@ func CreateState() *TState {
 	state.TNil = types.ToPointer(types.TVoid())
 	state.TErr = types.TError()
 	state.TVoid = types.TVoid()
-	state.ArrayTypes = make([]*TArrayElementTemplate, 0)
+	state.ListTypes = make([]*TArrayElementTemplate, 0)
 	state.MapTypes = make([]*TMapElementTemplate, 0)
 	return state
 }
@@ -63,7 +63,7 @@ func (state *TState) GetFile(path string) TFileJob {
 }
 
 func (state *TState) ArrayTypeExists(t *types.TTyping) bool {
-	for _, arrayType := range state.ArrayTypes {
+	for _, arrayType := range state.ListTypes {
 		if arrayType.elementType.ToNormalName() == t.ToNormalName() {
 			return true
 		}
@@ -74,7 +74,7 @@ func (state *TState) ArrayTypeExists(t *types.TTyping) bool {
 func (state *TState) AddArrayType(t *types.TTyping) {
 	newTemplate := new(TArrayElementTemplate)
 	newTemplate.elementType = t
-	state.ArrayTypes = append(state.ArrayTypes, newTemplate)
+	state.ListTypes = append(state.ListTypes, newTemplate)
 }
 
 func (state *TState) MapTypeExists(k *types.TTyping, v *types.TTyping) bool {
@@ -101,7 +101,7 @@ func (state *TState) GenerateArrays() string {
 	code += "\n\t\"fmt\""
 	code += "\n)"
 	code += "\n\n"
-	for _, arrayType := range state.ArrayTypes {
+	for _, arrayType := range state.ListTypes {
 		code += GenerateArrayCode(arrayType.elementType)
 		code += "\n\n"
 	}

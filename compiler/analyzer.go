@@ -283,7 +283,7 @@ func (analyzer *TAnalyzer) expressionAssignLeft(node *TAst) {
 		analyzer.expression(objectNode)
 		objectType := analyzer.stack.Pop().DataType
 		var elementType *types.TTyping = nil
-		if types.IsArr(objectType) {
+		if types.IsArray(objectType) {
 			elementType = objectType.GetInternal0()
 			analyzer.write(".", false)
 			analyzer.write("elements", false)
@@ -302,7 +302,7 @@ func (analyzer *TAnalyzer) expressionAssignLeft(node *TAst) {
 		analyzer.write("[", false)
 		analyzer.expression(indexNode)
 		indexType := analyzer.stack.Pop().DataType
-		if types.IsArr(indexType) && !types.IsAnyInt(indexType) {
+		if types.IsArray(indexType) && !types.IsAnyInt(indexType) {
 			RaiseLanguageCompileError(
 				analyzer.file.Path,
 				analyzer.file.Data,
@@ -789,8 +789,8 @@ func (analyzer *TAnalyzer) expression(node *TAst) {
 		analyzer.expression(objectNode)
 		objectType := analyzer.stack.Pop().DataType
 		var elementType *types.TTyping = nil
-		isArrayOrMap := types.IsArr(objectType) || types.IsMap(objectType)
-		if types.IsArr(objectType) {
+		isArrayOrMap := types.IsArray(objectType) || types.IsMap(objectType)
+		if types.IsArray(objectType) {
 			elementType = objectType.GetInternal0()
 			analyzer.write(".", false)
 			analyzer.write("Get", false)
@@ -815,7 +815,7 @@ func (analyzer *TAnalyzer) expression(node *TAst) {
 		}
 		analyzer.expression(indexNode)
 		indexType := analyzer.stack.Pop().DataType
-		if types.IsArr(objectType) && !types.IsAnyInt(indexType) {
+		if types.IsArray(objectType) && !types.IsAnyInt(indexType) {
 			RaiseLanguageCompileError(
 				analyzer.file.Path,
 				analyzer.file.Data,
@@ -1182,7 +1182,7 @@ func (analyzer *TAnalyzer) expression(node *TAst) {
 				objectNode.Position,
 			)
 		}
-		analyzer.write(fmt.Sprintf("new_%s", value.DataType.GoTypePure(true)), false)
+		analyzer.write(fmt.Sprintf("new_%s", value.DataType.GoTypePure()), false)
 		analyzer.write("(", false)
 		analyzer.expression(objectNode)
 		analyzer.stack.Pop()
@@ -2434,7 +2434,7 @@ func (analyzer *TAnalyzer) visitImport(node *TAst) {
 			for _, asVar := range asVars {
 				info := analyzer.scope.Env.GetSymbol(asVar.name)
 				analyzer.srcTb()
-				if types.IsArr(info.DataType) {
+				if types.IsArray(info.DataType) {
 					elementType := asVar.dataType.GetInternal0()
 					analyzer.write(fmt.Sprintf(
 						"%s %s = %s(%s.%s)",
@@ -3316,7 +3316,7 @@ func (analyzer *TAnalyzer) program(node *TAst) {
 	}
 
 	paramType := members[0].DataType
-	if !types.IsArr(paramType) {
+	if !types.IsArray(paramType) {
 		RaiseLanguageCompileError(
 			analyzer.file.Path,
 			analyzer.file.Data,

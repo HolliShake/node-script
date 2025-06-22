@@ -27,8 +27,10 @@ func (t *TTyping) DefaultValue() string {
 			elements[i] = element.DefaultValue()
 		}
 		return strings.Join(elements, ", ")
-	case TypeArr:
+	case TypeArray:
 		return fmt.Sprintf("NewArray%s([]%s{})", t.internal0.ToNormalName(), t.internal0.ToGoType())
+	case TypeGoArray:
+		return fmt.Sprintf("[]%s{}", t.internal0.ToGoType())
 	case TypeMap:
 		return fmt.Sprintf("make(map[%s]%s, 0)", t.internal0.ToGoType(), t.internal1.ToGoType())
 	case TypeFunc:
@@ -62,10 +64,12 @@ func (t *TTyping) ToString() string {
 			elements[i] = element.ToString()
 		}
 		return "(" + strings.Join(elements, ", ") + ")"
-	case TypeArr:
+	case TypeArray:
 		return "[" + t.internal0.ToString() + "]"
+	case TypeGoArray:
+		return "[]" + t.internal0.ToString() + "{}"
 	case TypeMap:
-		return "map[" + t.internal0.ToString() + ":" + t.internal1.ToString() + "]"
+		return "map[" + t.internal0.ToString() + ":" + t.internal1.ToString() + "]" + "{}"
 	case TypeFunc:
 		parameters := make([]string, len(t.members))
 		for i, parameter := range t.members {
@@ -89,7 +93,7 @@ func (t *TTyping) ToString() string {
 	}
 }
 
-func (t *TTyping) GoTypePure(pure bool) string {
+func (t *TTyping) GoTypePure() string {
 	switch t.typeId {
 	case TypeAny:
 		return GoAny
@@ -111,21 +115,19 @@ func (t *TTyping) GoTypePure(pure bool) string {
 	case TypeTuple:
 		elements := make([]string, len(t.elements))
 		for i, element := range t.elements {
-			elements[i] = element.GoTypePure(pure)
+			elements[i] = element.GoTypePure()
 		}
 		return "(" + strings.Join(elements, ", ") + ")"
-	case TypeArr:
-		if pure {
-			return "[]" + t.internal0.GoTypePure(pure)
-		}
+	case TypeArray:
 		return "*Array" + t.internal0.ToNormalName()
+	case TypeGoArray:
+		return "[]" + t.internal0.GoTypePure()
 	case TypeMap:
-		if pure {
-			return "map[" + t.internal0.GoTypePure(pure) + "]" + t.internal1.GoTypePure(pure)
-		}
 		return "*Map" + t.internal0.ToNormalName() + t.internal1.ToNormalName()
+	case TypeGoMap:
+		return "map[" + t.internal0.GoTypePure() + "]" + t.internal1.GoTypePure()
 	case TypeFunc:
-		returnType := t.internal0.GoTypePure(pure)
+		returnType := t.internal0.GoTypePure()
 		parameters := make([]string, len(t.members))
 		for i, parameter := range t.members {
 			parameters[i] = parameter.Name
@@ -133,9 +135,9 @@ func (t *TTyping) GoTypePure(pure bool) string {
 				parameters[i] = parameters[i] + " ..."
 			}
 			if strings.HasSuffix(parameters[i], "...") {
-				parameters[i] = parameters[i] + parameter.DataType.GoTypePure(pure)
+				parameters[i] = parameters[i] + parameter.DataType.GoTypePure()
 			} else {
-				parameters[i] = parameter.DataType.GoTypePure(pure)
+				parameters[i] = parameter.DataType.GoTypePure()
 			}
 		}
 		return fmt.Sprintf("func(%s) %s", strings.Join(parameters, ","), returnType)
@@ -144,14 +146,14 @@ func (t *TTyping) GoTypePure(pure bool) string {
 		return t.repr
 	default:
 		if t.typeId&MASK != 0 {
-			return "*" + t.internal0.GoTypePure(pure)
+			return "*" + t.internal0.GoTypePure()
 		}
 		panic("invalid type or not implemented")
 	}
 }
 
 func (t *TTyping) ToGoType() string {
-	return t.GoTypePure(false)
+	return t.GoTypePure()
 }
 
 func (t *TTyping) ToNormalName() string {
@@ -176,9 +178,11 @@ func (t *TTyping) ToNormalName() string {
 			}
 		}
 		return "Tuple_" + elements_normal_name
-	case TypeArr:
+	case TypeArray,
+		TypeGoArray:
 		return "Array_" + t.internal0.ToNormalName()
-	case TypeMap:
+	case TypeMap,
+		TypeGoMap:
 		return "Map_" + t.internal0.ToNormalName() + "_" + t.internal1.ToNormalName()
 	case TypeFunc:
 		parameters_normal_name := ""

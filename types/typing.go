@@ -1,8 +1,8 @@
 package types
 
 import (
+	"fmt"
 	"go/types"
-	"strings"
 )
 
 // ===================================
@@ -22,12 +22,14 @@ const (
 	TypeBit
 	TypeNil
 	TypeErr
-	TypeArr
+	TypeArray
 	TypeMap
 	TypeStruct
 	TypeStructInstance
 	TypeFunc
 	TypeTuple
+	TypeGoArray // For go array
+	TypeGoMap   // For go map
 	MASK
 )
 
@@ -46,7 +48,6 @@ const (
 	GoNil = ""
 	GoErr = "error"
 )
-
 const (
 	GoByte    = "byte"
 	GoInt8    = "int8"
@@ -60,6 +61,8 @@ const (
 	GoUint64  = "uint64"
 	GoFloat32 = "float32"
 	GoFloat64 = "float64"
+	GoArray   = "array"
+	GoMap     = "map"
 )
 
 // ============== END ================
@@ -99,6 +102,7 @@ type TTyping struct {
 	hasConstructor bool
 	instance0      *TTyping // Instance of this type
 	instance1      *TTyping // Instance of this type
+	compat         types.Type
 }
 
 func (t *TTyping) Variadic() bool {
@@ -198,6 +202,7 @@ func CreateTyping(repr string, size TypeCode) *TTyping {
 	typing.hasConstructor = false
 	typing.instance0 = nil
 	typing.instance1 = nil
+	typing.compat = nil
 	return typing
 }
 
@@ -247,15 +252,15 @@ func TTuple(elements []*TTyping) *TTyping {
 	return typing
 }
 
-func TArrayNoConstructor(element *TTyping) *TTyping {
-	typing := CreateTyping("[OVERRIDEME]", TypeArr)
-	typing.hasConstructor = false
+func TGoArray(element *TTyping) *TTyping {
+	typing := CreateTyping("[OVERRIDEME]", TypeGoArray)
+	typing.hasConstructor = true
 	typing.internal0 = element
 	return typing
 }
 
 func TArray(element *TTyping) *TTyping {
-	typing := CreateTyping("[OVERRIDEME]", TypeArr)
+	typing := CreateTyping("[OVERRIDEME]", TypeArray)
 	typing.hasConstructor = true
 	typing.internal0 = element
 
@@ -290,8 +295,8 @@ func TArray(element *TTyping) *TTyping {
 	return typing
 }
 
-func THashMapNoConstructor(key *TTyping, val *TTyping) *TTyping {
-	typing := CreateTyping("[OVERRIDEME]", TypeMap)
+func TGoHashMap(key *TTyping, val *TTyping) *TTyping {
+	typing := CreateTyping("[OVERRIDEME]", TypeGoMap)
 	typing.hasConstructor = false
 	typing.internal0 = key
 	typing.internal1 = val
@@ -337,12 +342,13 @@ func TFunc(variadic bool, attributes []*TPair, returnType *TTyping, panics bool)
 func TFromGoStruct(namespace string, goType types.Type) *TTyping {
 	typing := CreateTyping(namespace, TypeStruct)
 	typing.hasConstructor = false // Struct has no constructor, if it was not defined by user
+	typing.compat = goType
 
 	// Members (from Struct)
 	if structType, ok := goType.Underlying().(*types.Struct); ok {
 		for i := 0; i < structType.NumFields(); i++ {
 			field := structType.Field(i)
-			typing.members = append(typing.members, CreatePair(field.Name(), TFromGo(field.Type().String())))
+			typing.members = append(typing.members, CreatePair(field.Name(), TFromGoTypes(field.Type())))
 		}
 	}
 
@@ -350,153 +356,258 @@ func TFromGoStruct(namespace string, goType types.Type) *TTyping {
 	if namedType, ok := goType.(*types.Named); ok {
 		for i := 0; i < namedType.NumMethods(); i++ {
 			method := namedType.Method(i)
-			typing.methods = append(typing.methods, CreatePair(method.Name(), TFromGo(method.Type().String())))
+			typing.methods = append(typing.methods, CreatePair(method.Name(), TFromGoTypes(method.Type())))
 		}
 	}
 
 	return typing
 }
 
-func TFromGo(goType string) *TTyping {
-	switch goType {
-	case GoAny:
-		return TAny()
-	case GoInt:
-		return TInt64()
-	case GoFlt:
-		return TNum()
-	case GoStr:
-		return TStr()
-	case GoBit:
-		return TBool()
-	case GoNil:
-		return TVoid()
-	case GoErr:
-		return TError()
+func SetCompat(typing *TTyping, compat types.Type) *TTyping {
+	typing.compat = compat
+	return typing
+}
+
+func TFromGoTypes(t types.Type) *TTyping {
+	// Use a map to track types being processed to detect recursion
+	return tFromGoTypesWithVisited(t, make(map[types.Type]bool))
+}
+
+func tFromGoTypesWithVisited(t types.Type, visited map[types.Type]bool) *TTyping {
+	// Check if we've already seen this type in the current recursion path
+	if visited[t] {
+		return SetCompat(TAny(), t.Underlying()) // Break recursion by returning Any
 	}
 
-	switch goType {
-	case GoByte:
-		return TInt08()
-	case GoInt8:
-		return TInt08()
-	case GoInt16:
-		return TInt16()
-	case GoInt32:
-		return TInt32()
-	case GoInt64:
-		return TInt64()
-	case GoUint:
-		return TInt64()
-	case GoUint8:
-		return TInt08()
-	case GoUint16:
-		return TInt16()
-	case GoUint32:
-		return TInt32()
-	case GoUint64:
-		return TInt64()
-	case GoFloat32:
-		return TNum()
-	case GoFloat64:
-		return TNum()
+	// Mark this type as being processed
+	visited[t] = true
+	defer func() {
+		// Unmark when done with this branch
+		visited[t] = false
+	}()
+
+	// Handle `error`
+	errorType := types.Universe.Lookup("error").Type()
+	if types.Identical(t, errorType) {
+		return SetCompat(TError(), t.Underlying())
 	}
 
-	if strings.HasPrefix(goType, "[]") {
-		elementType := TFromGo(goType[2:])
-		if elementType == nil {
-			return nil
+	// Handle `any` or `interface{}` with no methods
+	if iface, ok := t.Underlying().(*types.Interface); ok && iface.NumMethods() == 0 {
+		return SetCompat(TAny(), t.Underlying())
+	}
+
+	switch tt := t.(type) {
+	case *types.Basic:
+		switch tt.Kind() {
+		case types.Int:
+			return SetCompat(TInt64(), t.Underlying())
+		case types.Int8:
+			return SetCompat(TInt08(), t.Underlying())
+		case types.Int16:
+			return SetCompat(TInt16(), t.Underlying())
+		case types.Int32:
+			return SetCompat(TInt32(), t.Underlying())
+		case types.Int64:
+			return SetCompat(TInt64(), t.Underlying())
+		case types.Uint, types.Uint64:
+			return SetCompat(TInt64(), t.Underlying())
+		case types.Uint8:
+			return SetCompat(TInt08(), t.Underlying())
+		case types.Uint16:
+			return SetCompat(TInt16(), t.Underlying())
+		case types.Uint32:
+			return SetCompat(TInt32(), t.Underlying())
+		case types.Float32, types.Float64:
+			return SetCompat(TNum(), t.Underlying())
+		case types.String:
+			return SetCompat(TStr(), t.Underlying())
+		case types.Bool:
+			return SetCompat(TBool(), t.Underlying())
+		case types.UntypedNil:
+			return SetCompat(TVoid(), t.Underlying())
+		case types.Uintptr:
+			return SetCompat(TInt64(), t.Underlying())
+		default:
+			// Skip unsupported basic types
+			return SetCompat(TAny(), t.Underlying())
 		}
-		return TArrayNoConstructor(elementType)
-	}
 
-	if strings.HasPrefix(goType, "map") {
-		openIndex := strings.Index(goType, "[")
-		closeIndex := strings.Index(goType, "]")
-		keyType := goType[openIndex+1 : closeIndex]
-		valueType := goType[closeIndex+1:]
-		k := TFromGo(keyType)
-		v := TFromGo(valueType)
-		if k == nil || v == nil {
-			return nil
+	case *types.Slice, *types.Array:
+		var elem types.Type
+		switch a := tt.(type) {
+		case *types.Slice:
+			elem = a.Elem()
+		case *types.Array:
+			elem = a.Elem()
 		}
-		return THashMapNoConstructor(k, v)
-	}
+		et := tFromGoTypesWithVisited(elem, visited)
+		if et == nil {
+			return SetCompat(TAny(), t.Underlying()) // Fallback to Any for unknown element types
+		}
+		return SetCompat(TGoArray(et), t.Underlying())
 
-	if strings.HasPrefix(goType, "func") {
-		openIndex := strings.Index(goType, "(")
-		closeIndex := strings.Index(goType, ")")
-		parameters := goType[openIndex+1 : closeIndex]
-		parametersArray := make([]*TPair, 0)
-		parametersStr := strings.Split(parameters, ",")
+	case *types.Pointer:
+		et := tFromGoTypesWithVisited(tt.Elem(), visited)
+		if et == nil {
+			return SetCompat(TAny(), t.Underlying()) // Fallback to Any for unknown pointer types
+		}
+		return SetCompat(ToPointer(et), t.Underlying())
 
-		isVariadic := false
-		if len(parametersStr) > 0 {
-			lastParameter := strings.Split(parametersStr[len(parametersStr)-1], " ")
-			if len(lastParameter) > 1 && strings.HasPrefix(lastParameter[1], "...") {
-				isVariadic = true
-				parametersStr[len(parametersStr)-1] = lastParameter[0] + " " + lastParameter[1][3:]
+	case *types.Map:
+		kt := tFromGoTypesWithVisited(tt.Key(), visited)
+		vt := tFromGoTypesWithVisited(tt.Elem(), visited)
+		if kt == nil || vt == nil {
+			return SetCompat(TAny(), t.Underlying()) // Fallback to Any for invalid map types
+		}
+		return SetCompat(TGoHashMap(kt, vt), t.Underlying())
+
+	case *types.Signature:
+		// Only include documented/safe parameters
+		params := make([]*TPair, 0, tt.Params().Len())
+		for i := 0; i < tt.Params().Len(); i++ {
+			param := tt.Params().At(i)
+			pt := tFromGoTypesWithVisited(param.Type(), visited)
+			if pt == nil {
+				continue // Skip unsafe/undocumented parameter types
+			}
+
+			// Use a safe parameter name
+			paramName := param.Name()
+			if paramName == "" {
+				paramName = fmt.Sprintf("param%d", i)
+			}
+
+			// For variadic parameters, use only the element type
+			if tt.Variadic() && i == tt.Params().Len()-1 {
+				if slice, ok := param.Type().(*types.Slice); ok {
+					pt = tFromGoTypesWithVisited(slice.Elem(), visited)
+					if pt == nil {
+						pt = SetCompat(TAny(), t.Underlying()) // Fallback if element type is unknown
+					}
+				}
+			}
+
+			params = append(params, CreatePair(paramName, pt))
+		}
+
+		var ret *TTyping
+		switch tt.Results().Len() {
+		case 0:
+			ret = TVoid()
+		case 1:
+			rt := tFromGoTypesWithVisited(tt.Results().At(0).Type(), visited)
+			if rt == nil {
+				ret = SetCompat(TAny(), t.Underlying()) // Fallback for unknown return type
+			} else {
+				ret = rt
+			}
+		default:
+			tuple := make([]*TTyping, 0, tt.Results().Len())
+			hasInvalidType := false
+			for i := 0; i < tt.Results().Len(); i++ {
+				rt := tFromGoTypesWithVisited(tt.Results().At(i).Type(), visited)
+				if rt == nil {
+					hasInvalidType = true
+					break
+				}
+				tuple = append(tuple, rt)
+			}
+
+			if hasInvalidType {
+				ret = SetCompat(TAny(), t.Underlying()) // Fallback for tuples with invalid types
+			} else {
+				ret = TTuple(tuple)
 			}
 		}
 
-		for _, parameter := range parametersStr {
-			if len(parameter) == 0 {
+		return SetCompat(TFunc(tt.Variadic(), params, ret, false), t.Underlying())
+
+	case *types.Struct:
+		members := make([]*TPair, 0, tt.NumFields())
+		for i := 0; i < tt.NumFields(); i++ {
+			field := tt.Field(i)
+			// Skip unexported fields (internal implementation details)
+			if !field.Exported() {
 				continue
 			}
-			paramAndTypePairStr := strings.Split(strings.Trim(parameter, " "), " ")
-			var ptype *TTyping = nil
-			if len(paramAndTypePairStr) == 1 {
-				ptype = TFromGo(paramAndTypePairStr[0])
-			} else if len(paramAndTypePairStr) == 2 {
-				ptype = TFromGo(paramAndTypePairStr[1])
+
+			ft := tFromGoTypesWithVisited(field.Type(), visited)
+			if ft == nil {
+				continue // Skip unsafe/undocumented field types
 			}
-			if ptype == nil {
-				return nil
-			}
-			parametersArray = append(parametersArray, CreatePair(paramAndTypePairStr[0], TFromGo(paramAndTypePairStr[1])))
+			members = append(members, CreatePair(field.Name(), ft))
 		}
+		// Get the struct name if available
+		structName := ""
+		if named, ok := t.(*types.Named); ok {
+			structName = named.Obj().Name()
+		}
+		st := CreateTyping(structName, TypeStruct)
+		st.hasConstructor = false
+		st.members = members
+		st.compat = t.Underlying()
+		return SetCompat(st, t.Underlying())
 
-		goReturn := strings.Trim(goType[closeIndex+1:], " ")
+	case *types.Named:
+		// If it's the error interface, already handled above
+		under := tt.Underlying()
+		st := tFromGoTypesWithVisited(under, visited)
+		if st == nil {
+			return SetCompat(TAny(), t.Underlying()) // Fallback for unknown named types
+		}
+		st.repr = tt.Obj().Name()
 
-		var returnType *TTyping = nil
+		// Add only exported methods from Named type
+		methods := make([]*TPair, 0, tt.NumMethods())
+		for i := 0; i < tt.NumMethods(); i++ {
+			m := tt.Method(i)
+			// Skip unexported methods (internal implementation details)
+			if !m.Exported() {
+				continue
+			}
 
-		if len(goReturn) == 0 {
-			returnType = TVoid()
-		} else if strings.HasPrefix(goReturn, "(") && strings.HasSuffix(goReturn, ")") {
-			openIndex = strings.Index(goReturn, "(")
-			closeIndex = strings.Index(goReturn, ")")
-			goReturn = goReturn[openIndex+1 : closeIndex]
-			tupleElements := make([]*TTyping, 0)
-			tupleElementsStr := strings.Split(goReturn, ",")
-			for _, tupleElement := range tupleElementsStr {
-				if len(tupleElement) == 0 {
+			mt := tFromGoTypesWithVisited(m.Type(), visited)
+			if mt == nil {
+				continue // Skip unsafe/undocumented method types
+			}
+			methods = append(methods, CreatePair(m.Name(), mt))
+		}
+		st.methods = methods
+
+		return SetCompat(st, t.Underlying())
+
+	case *types.Interface:
+		// Create interface with only exported methods
+		if tt.NumMethods() > 0 {
+			methods := make([]*TPair, 0, tt.NumMethods())
+			for i := 0; i < tt.NumMethods(); i++ {
+				m := tt.Method(i)
+				// Skip unexported methods
+				if !m.Exported() {
 					continue
 				}
-				paramAndTypePairStr := strings.Split(strings.Trim(tupleElement, " "), " ")
-				var elementType *TTyping = nil
-				if len(paramAndTypePairStr) == 1 {
-					elementType = TFromGo(paramAndTypePairStr[0])
-				} else if len(paramAndTypePairStr) == 2 {
-					elementType = TFromGo(paramAndTypePairStr[1])
+
+				mt := tFromGoTypesWithVisited(m.Type(), visited)
+				if mt == nil {
+					continue
 				}
-				if elementType == nil {
-					return nil
-				}
-				tupleElements = append(tupleElements, elementType)
+				methods = append(methods, CreatePair(m.Name(), mt))
 			}
-			returnType = TTuple(tupleElements)
-		} else {
-			returnType = TFromGo(goReturn)
-		}
 
-		if returnType == nil {
-			return nil
+			// If we have methods, create a proper interface type
+			if len(methods) > 0 {
+				it := CreateTyping("", TypeStruct)
+				it.methods = methods
+				return SetCompat(it, t.Underlying())
+			}
 		}
+		return SetCompat(TAny(), t.Underlying())
 
-		return TFunc(isVariadic, parametersArray, returnType, false)
+	default:
+		// For any unhandled type, return Any as a safe fallback
+		return SetCompat(TAny(), t.Underlying())
 	}
-
-	return nil
 }
 
 func ToInstance(typing *TTyping) *TTyping {

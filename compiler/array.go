@@ -17,61 +17,61 @@ type Array{{TypeName}} struct {
 	length int
 }
 func NewArray{{TypeName}}(elements []{{GoType}}) *Array{{TypeName}} {
-	arr := new(Array{{TypeName}})
-	arr.elements = make([]{{GoType}}, len(elements))
-	arr.length = len(elements)
+	lst := new(Array{{TypeName}})
+	lst.elements = make([]{{GoType}}, len(elements))
+	lst.length = len(elements)
 	for i := 0; i < len(elements); i++ {
-		arr.elements[i] = elements[i]
+		lst.elements[i] = elements[i]
 	}
-	return arr
+	return lst
 }
-func (arr *Array{{TypeName}}) Length() int {
-	return arr.length
+func (lst *Array{{TypeName}}) Length() int {
+	return lst.length
 }
-func (arr *Array{{TypeName}}) Get(index int) {{TypeName}} {
-	return arr.elements[index]
+func (lst *Array{{TypeName}}) Get(index int) {{TypeName}} {
+	return lst.elements[index]
 }
-func (arr *Array{{TypeName}}) Set(index int, value {{TypeName}}) {
-	arr.elements[index] = value
+func (lst *Array{{TypeName}}) Set(index int, value {{TypeName}}) {
+	lst.elements[index] = value
 }
-func (arr *Array{{TypeName}}) Push(value {{TypeName}}) {
-	arr.elements = append(arr.elements, value)
-	arr.length++
+func (lst *Array{{TypeName}}) Push(value {{TypeName}}) {
+	lst.elements = append(lst.elements, value)
+	lst.length++
 }
-func (arr *Array{{TypeName}}) Pop() {{TypeName}} {
-	last := arr.elements[arr.length - 1]
-	arr.elements = arr.elements[:arr.length - 1]
-	arr.length--
+func (lst *Array{{TypeName}}) Pop() {{TypeName}} {
+	last := lst.elements[lst.length - 1]
+	lst.elements = lst.elements[:lst.length - 1]
+	lst.length--
 	return last
 }
-func (arr *Array{{TypeName}}) Each(callback func(index int, value {{TypeName}})) {
-	for i := 0; i < len(arr.elements); i++ {
-		callback(i, arr.elements[i])
+func (lst *Array{{TypeName}}) Each(callback func(index int, value {{TypeName}})) {
+	for i := 0; i < len(lst.elements); i++ {
+		callback(i, lst.elements[i])
 	}
 }
-func (arr *Array{{TypeName}}) Some(callback func(index int, value {{TypeName}}) bool) bool {
-	for i := 0; i < len(arr.elements); i++ {
-		if callback(i, arr.elements[i]) {
+func (lst *Array{{TypeName}}) Some(callback func(index int, value {{TypeName}}) bool) bool {
+	for i := 0; i < len(lst.elements); i++ {
+		if callback(i, lst.elements[i]) {
 			return true
 		}
 	}
 	return false
 }
-func (arr *Array{{TypeName}}) String() string {
-	if arr.length == 0 {
+func (lst *Array{{TypeName}}) String() string {
+	if lst.length == 0 {
 		return "[]"
 	}
 	
 	var sb strings.Builder
 	sb.WriteString("[")
 	
-	for i := 0; i < arr.length; i++ {
+	for i := 0; i < lst.length; i++ {
 		if i > 0 {
 			sb.WriteString(", ")
 		}
 		
 		// Convert element to string based on type
-		switch v := interface{}(arr.elements[i]).(type) {
+		switch v := interface{}(lst.elements[i]).(type) {
 		case string:
 			sb.WriteString("\"" + v + "\"")
 		case nil:

@@ -1,5 +1,10 @@
 package types
 
+import (
+	"fmt"
+	"go/types"
+)
+
 func IsAny(ttype *TTyping) bool {
 	return ttype.typeId == TypeAny
 }
@@ -55,8 +60,8 @@ func IsError(ttype *TTyping) bool {
 	return ttype.typeId == TypeErr
 }
 
-func IsArr(ttype *TTyping) bool {
-	return ttype.typeId == TypeArr
+func IsArray(ttype *TTyping) bool {
+	return ttype.typeId == TypeArray
 }
 
 func IsMap(ttype *TTyping) bool {
@@ -106,7 +111,7 @@ func IsValidKey(ttype *TTyping) bool {
 		return true
 	case TypeAny:
 	case TypeNil:
-	case TypeArr:
+	case TypeArray:
 	case TypeMap:
 	case TypeStruct:
 	default:
@@ -127,7 +132,7 @@ func IsValidElementType(ttype *TTyping) bool {
 		return true
 	case TypeNil:
 		return false
-	case TypeArr:
+	case TypeArray:
 	case TypeMap:
 		return true
 	case TypeAny:
@@ -208,7 +213,7 @@ func CanStore(dst *TTyping, src *TTyping) bool {
 	}
 
 	// Handle array types
-	if IsArr(dst) && IsArr(src) {
+	if IsArray(dst) && IsArray(src) {
 		if dst.internal0 == nil || src.internal0 == nil {
 			return false
 		}
@@ -256,6 +261,10 @@ func CanStore(dst *TTyping, src *TTyping) bool {
 			return dst.internal0 == src.internal0
 		}
 		return CanStore(dst.internal0, src.internal0)
+	}
+	if dst.compat != nil && src.compat != nil {
+		fmt.Println(dst.compat, src.compat, types.AssignableTo(dst.compat, src.compat))
+		return types.AssignableTo(src.compat, dst.compat)
 	}
 
 	return false
@@ -342,7 +351,7 @@ func CanDoArithmetic(opt string, a *TTyping, b *TTyping) bool {
 			return true
 		} else if IsVoidPointer(a) && IsError(b) {
 			return true
-		} else if IsArr(a) && IsArr(b) && CanStore(a.internal0, b.internal0) {
+		} else if IsArray(a) && IsArray(b) && CanStore(a.internal0, b.internal0) {
 			return true
 		} else if IsMap(a) && IsMap(b) &&
 			CanStore(a.internal0, b.internal0) &&
@@ -374,7 +383,7 @@ func CanDoArithmetic(opt string, a *TTyping, b *TTyping) bool {
 			return true
 		} else if IsVoidPointer(a) && IsError(b) {
 			return true
-		} else if IsArr(a) && IsArr(b) && CanStore(a.internal0, b.internal0) {
+		} else if IsArray(a) && IsArray(b) && CanStore(a.internal0, b.internal0) {
 			return true
 		} else if IsMap(a) && IsMap(b) &&
 			CanStore(a.internal0, b.internal0) &&

@@ -632,9 +632,12 @@ func (f *TForward) forwardImport(fileJob TFileJob, node *TAst) {
 				var convertedType *types.TTyping = nil
 
 				if IsGoStruct(symbolType) {
-					convertedType = types.TFromGoStruct(JoinVariableName(GetFileNameWithoutExtension(fileJob.Path), nameNode.Str0), symbolType)
+					convertedType = types.TFromGoStruct(JoinVariableName(
+						GetFileNameWithoutExtension(fileJob.Path),
+						nameNode.Str0,
+					), symbolType)
 				} else {
-					convertedType = types.TFromGo(symbolType.String())
+					convertedType = types.TFromGoTypes(symbolType)
 				}
 
 				if convertedType == nil {
