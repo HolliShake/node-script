@@ -103,8 +103,8 @@ function main(args [str]) i32 {
     Println(p, arr[0]);
     arr[0] += 2;
     arr[0] -= 2;
-    arr[0]++;
-    arr[0]--;
+    arr[0] ++;
+    arr[0] --;
     local mp {str:i32} = {
         "One": 1,
         "Two": 2
@@ -112,10 +112,14 @@ function main(args [str]) i32 {
     Println(mp, arr);
     mp["One"] += 2;
     Println(mp["One"], arr.Get(0), mp.Get("One"), {
-        "One": 2,
-        "Three": 4
+        "One": 1,
+        "Two": 2
     });
-    local add (i32,i32):i32 = addFn;
+    local add (i32, i32):i32 = addFn;
     Println(add(1, 2));
+    mp.Set("Three", 3);
+    Println(mp);
+    mp.Delete("Three");
+    Println(mp);
     return 100;
 }
