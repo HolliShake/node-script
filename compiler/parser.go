@@ -708,7 +708,16 @@ func (parser *TParser) baseType() *TAst {
 			)
 		}
 		// FunctionType
+		parser.acceptV(":")
 		returnNode := parser.typeOrNil()
+		if returnNode == nil {
+			RaiseLanguageCompileError(
+				parser.Tokenizer.File,
+				parser.Tokenizer.Data,
+				"missing return type",
+				parser.look.Position,
+			)
+		}
 		ended = returnNode.Position
 		if returnNode == nil {
 			RaiseLanguageCompileError(

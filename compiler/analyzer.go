@@ -181,6 +181,30 @@ func (analyzer *TAnalyzer) getType(node *TAst) *types.TTyping {
 			)
 		}
 		return types.ToPointer(elementType)
+	case AstTypeFunc:
+		argumentTypes := make([]*types.TPair, 0)
+		for index, argumentAst := range node.AstArr0 {
+			argumentType := analyzer.getType(argumentAst)
+			if argumentType == nil {
+				RaiseLanguageCompileError(
+					analyzer.file.Path,
+					analyzer.file.Data,
+					"invalid function argument type",
+					argumentAst.Position,
+				)
+			}
+			argumentTypes = append(argumentTypes, types.CreatePair(fmt.Sprintf("$%d", index), argumentType))
+		}
+		returnType := analyzer.getType(node.Ast0)
+		if returnType == nil {
+			RaiseLanguageCompileError(
+				analyzer.file.Path,
+				analyzer.file.Data,
+				"missing return type",
+				node.Position,
+			)
+		}
+		return types.TFunc(false, argumentTypes, returnType, false)
 	default:
 		RaiseLanguageCompileError(
 			analyzer.file.Path,
@@ -1619,11 +1643,11 @@ func (analyzer *TAnalyzer) expression(node *TAst) {
 		// Handle single variable declaration
 		if node.Ast0.Ttype == AstIDN {
 			// Check for duplicate variable names early
-			if analyzer.file.Env.HasLocalSymbol(node.Ast0.Str0) {
+			if analyzer.scope.Env.HasLocalSymbol(node.Ast0.Str0) {
 				RaiseLanguageCompileError(
 					analyzer.file.Path,
 					analyzer.file.Data,
-					"duplicate variable name",
+					"duplicate variable namesss",
 					node.Ast0.Position,
 				)
 			}

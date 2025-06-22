@@ -50,6 +50,10 @@ function returnErr() (bool, error) {
     return true, null;
 }
 
+function addFn(a i32, b i32) i32 {
+    return a + b;
+}
+
 function main(args [str]) i32 {
     local g num = 1000 + 20.2;
     a, b, c := 1, 2, 3;
@@ -111,5 +115,7 @@ function main(args [str]) i32 {
         "One": 2,
         "Three": 4
     });
+    local add (i32,i32):i32 = addFn;
+    Println(add(1, 2));
     return 100;
 }

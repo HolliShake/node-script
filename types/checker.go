@@ -83,7 +83,7 @@ func IsTheSameInstance(ttype1 *TTyping, ttype2 *TTyping) bool {
 	if ttype1 == ttype2 {
 		return true
 	}
-	return ttype1.ToGoType() == ttype2.ToGoType()
+	return ttype1.ToString() == ttype2.ToString()
 }
 
 func IsPointer(ttype *TTyping) bool {
@@ -199,6 +199,14 @@ func CanStore(dst *TTyping, src *TTyping) bool {
 	}
 	if IsAny(dst) {
 		return true
+	}
+	if IsFunc(dst) && IsFunc(src) {
+		for i, element := range dst.members {
+			if !CanStore(element.DataType, src.members[i].DataType) {
+				return false
+			}
+		}
+		return CanStore(dst.internal0, src.internal0)
 	}
 	return false
 }

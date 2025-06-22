@@ -130,9 +130,13 @@ func (t *TTyping) GoTypePure(pure bool) string {
 		for i, parameter := range t.members {
 			parameters[i] = parameter.Name
 			if i == len(t.members)-1 && t.variadic {
-				parameters[i] = parameters[i] + "..."
+				parameters[i] = parameters[i] + " ..."
 			}
-			parameters[i] = parameters[i] + parameter.DataType.GoTypePure(pure)
+			if strings.HasSuffix(parameters[i], "...") {
+				parameters[i] = parameters[i] + parameter.DataType.GoTypePure(pure)
+			} else {
+				parameters[i] = parameter.DataType.GoTypePure(pure)
+			}
 		}
 		return fmt.Sprintf("func(%s) %s", strings.Join(parameters, ","), returnType)
 	case TypeStruct,
