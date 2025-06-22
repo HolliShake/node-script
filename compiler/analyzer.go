@@ -2855,9 +2855,8 @@ func (analyzer *TAnalyzer) visitIf(node *TAst) {
 	if thenNode.Ttype == AstCodeBlock {
 		analyzer.statement(thenNode)
 	} else {
-		analyzer.write("{", false)
+		analyzer.write("{", true)
 		analyzer.incTb()
-		analyzer.srcTb()
 		analyzer.statement(thenNode)
 		analyzer.decTb()
 		analyzer.srcNl()
@@ -2867,9 +2866,8 @@ func (analyzer *TAnalyzer) visitIf(node *TAst) {
 	if elseNode != nil {
 		analyzer.write("else", false)
 		analyzer.srcSp()
-		analyzer.write("{", false)
+		analyzer.write("{", true)
 		analyzer.incTb()
-		analyzer.srcTb()
 		analyzer.statement(elseNode)
 		analyzer.decTb()
 		analyzer.srcNl()

@@ -6,9 +6,9 @@ import ( Time ) from "go:time";
 var DATA i32 = 100, TYPE str = "true", PascalTest i8 = 10;
 
 struct Person {
-    Name str;
-    Age  i32;
-    Pet  Dog;
+    Name  str;
+    Age   i32;
+    Pet   Dog;
     IsGay bool;
 }
 
@@ -135,10 +135,10 @@ function main(args [str]) i32 {
 
     Println(Permute(20));
 
-    if (3 > 3) 
-        2 + 3;
+    if (3 >= 3) 
+        Println("Yes");
     else
-        3 + 3;
+        Println("No");
 
     return 100;
 }
