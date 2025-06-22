@@ -150,7 +150,6 @@ function main(args [str]) i32 {
     for (var x1 i32 = 0;y1 != null; x1, y1 = +1,(function() void { Println("Hello!"); })) {
         Println(">>", x1, y1);
         x := function(a i32, b i32) i32 {
-            break;
             return a + b;
         };
         Println(x(1, 2));
@@ -173,6 +172,14 @@ function main(args [str]) i32 {
     return 100;
 }
 
-function iter(a i32, value i32) void {
-    Println(value);
+function iter(a i32, value i32) i32 {
+    if (false) {
+        if (false) {
+            return 2;
+        } else {
+            return 123;
+        }
+    } else {
+        return 2;
+    }
 }

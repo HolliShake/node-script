@@ -116,12 +116,5 @@ func (scope *TScope) InConditional() bool {
 }
 
 func (scope *TScope) InSingle() bool {
-	current := scope
-	for current != nil {
-		if current.Type == ScopeSingle {
-			return true
-		}
-		current = current.Parent
-	}
-	return false
+	return scope.Type == ScopeSingle
 }

@@ -2259,6 +2259,7 @@ func (analyzer *TAnalyzer) visitFunction(node *TAst) {
 		}
 	}
 	if functionScope.Return == nil {
+		// If the function does not return a value, then we need to return a value
 		if len(childrenNode) > 0 {
 			analyzer.srcNl()
 		}
@@ -2508,7 +2509,7 @@ func (analyzer *TAnalyzer) visitImport(node *TAst) {
 }
 
 func (analyzer *TAnalyzer) visitVar(node *TAst) {
-	if !analyzer.scope.InGlobal() {
+	if !analyzer.scope.InGlobal() || analyzer.scope.InSingle() {
 		RaiseLanguageCompileError(
 			analyzer.file.Path,
 			analyzer.file.Data,
@@ -2983,12 +2984,20 @@ func (analyzer *TAnalyzer) visitFor(node *TAst) {
 		}
 		analyzer.scope = CreateScope(analyzer.scope, ScopeLoop)
 		if bodyNode.Ttype == AstCodeBlock {
+			analyzer.scope = CreateScope(analyzer.scope, ScopeConditional)
+			analyzer.scope = CreateScope(analyzer.scope, ScopeSingle)
 			analyzer.statement(bodyNode)
+			analyzer.scope = analyzer.scope.Parent // Leave the single scope
+			analyzer.scope = analyzer.scope.Parent // Leave the loop scope
 		} else {
 			analyzer.srcSp()
 			analyzer.write("{", true)
 			analyzer.incTb()
+			analyzer.scope = CreateScope(analyzer.scope, ScopeConditional)
+			analyzer.scope = CreateScope(analyzer.scope, ScopeSingle)
 			analyzer.statement(bodyNode)
+			analyzer.scope = analyzer.scope.Parent // Leave the single scope
+			analyzer.scope = analyzer.scope.Parent // Leave the loop scope
 			analyzer.srcNl()
 			analyzer.decTb()
 			analyzer.srcTb()
@@ -3006,7 +3015,11 @@ func (analyzer *TAnalyzer) visitFor(node *TAst) {
 		analyzer.scope = CreateScope(analyzer.scope, ScopeLoop)
 		analyzer.write("{", true)
 		analyzer.incTb()
+		analyzer.scope = CreateScope(analyzer.scope, ScopeConditional)
+		analyzer.scope = CreateScope(analyzer.scope, ScopeSingle)
 		analyzer.statement(bodyNode)
+		analyzer.scope = analyzer.scope.Parent // Leave the single scope
+		analyzer.scope = analyzer.scope.Parent // Leave the loop scope
 		analyzer.srcNl()
 		analyzer.srcTb()
 		analyzer.write("if", false)
@@ -3058,11 +3071,19 @@ func (analyzer *TAnalyzer) visitIf(node *TAst) {
 	analyzer.stack.Pop()
 	analyzer.srcSp()
 	if thenNode.Ttype == AstCodeBlock {
+		analyzer.scope = CreateScope(analyzer.scope, ScopeConditional)
+		analyzer.scope = CreateScope(analyzer.scope, ScopeSingle)
 		analyzer.statement(thenNode)
+		analyzer.scope = analyzer.scope.Parent // Leave the single scope
+		analyzer.scope = analyzer.scope.Parent // Leave the conditional scope
 	} else {
 		analyzer.write("{", true)
 		analyzer.incTb()
+		analyzer.scope = CreateScope(analyzer.scope, ScopeConditional)
+		analyzer.scope = CreateScope(analyzer.scope, ScopeSingle)
 		analyzer.statement(thenNode)
+		analyzer.scope = analyzer.scope.Parent // Leave the single scope
+		analyzer.scope = analyzer.scope.Parent // Leave the conditional scope
 		analyzer.decTb()
 		analyzer.srcNl()
 		analyzer.srcTb()
@@ -3071,13 +3092,21 @@ func (analyzer *TAnalyzer) visitIf(node *TAst) {
 	if elseNode != nil {
 		analyzer.write("else", false)
 		analyzer.srcSp()
-		analyzer.write("{", true)
-		analyzer.incTb()
-		analyzer.statement(elseNode)
-		analyzer.decTb()
-		analyzer.srcNl()
-		analyzer.srcTb()
-		analyzer.write("}", false)
+		if elseNode.Ttype == AstCodeBlock {
+			analyzer.scope = CreateScope(analyzer.scope, ScopeSingle)
+			analyzer.statement(elseNode)
+			analyzer.scope = analyzer.scope.Parent
+		} else {
+			analyzer.write("{", true)
+			analyzer.incTb()
+			analyzer.scope = CreateScope(analyzer.scope, ScopeSingle)
+			analyzer.statement(elseNode)
+			analyzer.scope = analyzer.scope.Parent
+			analyzer.decTb()
+			analyzer.srcNl()
+			analyzer.srcTb()
+			analyzer.write("}", false)
+		}
 	}
 }
 
@@ -3156,15 +3185,33 @@ func (analyzer *TAnalyzer) visitReturn(node *TAst) {
 		currentScope = currentScope.Parent
 	}
 	// Return statement
+	if currentScope.Return != nil {
+		RaiseLanguageCompileError(
+			analyzer.file.Path,
+			analyzer.file.Data,
+			"unreachable return statement",
+			node.Position,
+		)
+	}
 	exprNode := node.Ast0
 	analyzer.srcTb()
 	analyzer.write("return", false)
 	if exprNode != nil {
 		analyzer.srcSp()
 		analyzer.expression(exprNode)
-		currentScope.Return = analyzer.stack.Pop().DataType
+		if !analyzer.scope.InConditional() {
+			// If inside a conditional scope,
+			// it's possible that there's no reachable return statement
+			currentScope.Return = analyzer.stack.Pop().DataType
+		} else {
+			analyzer.stack.Pop()
+		}
 	} else {
-		currentScope.Return = types.TVoid()
+		if !analyzer.scope.InConditional() {
+			// If inside a conditional scope,
+			// it's possible that there's no reachable return statement
+			currentScope.Return = types.TVoid()
+		}
 	}
 }
 
