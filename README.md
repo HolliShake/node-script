@@ -20,3 +20,4 @@ To install Parrot Script:
 - [ ] Add Do/While loop
 - [ ] Very Go package path
 - [ ] Add wrapper if the foreign function returns array or map
+- [ ] Add builtin lib import directive. example: import ( read ) from "lib:io";
